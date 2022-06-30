@@ -6,6 +6,6 @@ use tokio_pg_mapper_derive::PostgresMapper;
 pub struct User {
     pub id: i32,
     pub nick: String,
-    pub pwd: String,
+    pub pwd: Option<String>,
     pub _salt: String,
 }

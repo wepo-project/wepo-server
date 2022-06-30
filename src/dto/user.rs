@@ -6,3 +6,23 @@ pub struct RegisterUserDTO {
     /// 没有密码的话，谁都能登录
     pub pwd: Option<String>,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct RegisterResultDTO {
+    pub id: i32,
+    pub nick: String,
+}
+
+
+#[derive(Deserialize, Serialize)]
+pub struct LoginUserDTO {
+    pub nick: String,
+    pub pwd: Option<String>,
+}
+
+
+#[derive(Deserialize, Serialize)]
+pub struct LoginResultDTO {
+    pub id: i32,
+    pub nick: String,
+}
