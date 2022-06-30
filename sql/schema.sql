@@ -9,8 +9,9 @@ COMMENT ON SCHEMA wepo
 CREATE TABLE IF NOT EXISTS wepo.users
 (
     id serial NOT NULL,
-    nick character varying(15) NOT NULL,
+    nick character varying(15) NOT NULL UNIQUE,
     pwd character varying(20),
-    _salt text,
+    _salt text NOT NULL,
+    create_time DATE NOT NULL DEFAULT CURRENT_DATE,
     CONSTRAINT users_pkey PRIMARY KEY (id)
 );
