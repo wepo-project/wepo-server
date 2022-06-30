@@ -35,6 +35,7 @@ async fn main() -> std::io::Result<()> {
         )
     })
     .bind(config.server_addr.clone())?
+    .workers(2)
     .run();
 
     info!("Server running at http://{}/", config.server_addr);
