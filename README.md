@@ -17,8 +17,9 @@ CREATE DATABASE wepo OWNER ww;
 3. 初始化数据库
 
 ```shell
-psql -f sql/schema.sql wepo -U ww
+psql -f sql/schema.sql wepo -U postgres
 ```
+postgres: 超级管理员，如果不是则替换
 
 4. 赋予权限
 
