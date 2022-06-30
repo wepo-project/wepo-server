@@ -1,8 +1,7 @@
 mod config;
 mod db;
-mod dto;
 mod errors;
-mod handlers;
+mod data_models;
 mod models;
 
 use crate::config::WepoConfig;
@@ -30,8 +29,8 @@ async fn main() -> std::io::Result<()> {
     let server = HttpServer::new(move || {
         App::new().app_data(web::Data::new(pool.clone())).service(
             web::scope("/v1")
-                .service(handlers::user::register_user)
-                .service(handlers::user::user_login),
+                .service(models::user::handler::register_user)
+                .service(models::user::handler::user_login),
         )
     })
     .bind(config.server_addr.clone())?

@@ -1,4 +1,4 @@
-use crate::{db, errors::MyError, dto::user::{RegisterUserDTO, LoginUserDTO, RegisterResultDTO, LoginResultDTO}};
+use crate::{db, errors::MyError, models::user::dto::{RegisterUserDTO, LoginUserDTO, RegisterResultDTO, LoginResultDTO}};
 use actix_web::{web, Error, HttpResponse, post};
 use deadpool_postgres::{Client, Pool};
 

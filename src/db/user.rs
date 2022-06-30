@@ -1,5 +1,4 @@
-use crate::dto::user::LoginUserDTO;
-use crate::{dto::user::RegisterUserDTO, errors::MyError, models::User};
+use crate::{models::user::dto::{LoginUserDTO, RegisterUserDTO}, errors::MyError, data_models::User};
 use deadpool_postgres::Client;
 use log::info;
 use rand::distributions::Alphanumeric;
