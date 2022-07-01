@@ -21,8 +21,9 @@ pub struct LoginUserDTO {
 }
 
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LoginResultDTO {
     pub id: i32,
     pub nick: String,
+    pub token: String,
 }

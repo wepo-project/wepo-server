@@ -1,4 +1,4 @@
-use crate::{models::user::dto::{LoginUserDTO, RegisterUserDTO}, errors::MyError, data_models::User};
+use crate::{models::user::dto::{LoginUserDTO, RegisterUserDTO}, errors::MyError, data_models::User, utils};
 use deadpool_postgres::Client;
 use log::info;
 use rand::distributions::Alphanumeric;
@@ -11,7 +11,7 @@ pub async fn add_user(client: &Client, mut user_info: RegisterUserDTO) -> Result
     let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.unwrap();
 
-    let _salt = create_salt().unwrap();
+    let _salt = create_salt();
 
     if let Some(_pwd) = &user_info.pwd {
         user_info.pwd = Some(pwd_encrypt(_pwd, &_salt));
@@ -30,8 +30,8 @@ pub async fn add_user(client: &Client, mut user_info: RegisterUserDTO) -> Result
 }
 
 /// 随机生成盐，长度为30
-pub(crate) fn create_salt() -> Result<String, std::string::FromUtf8Error> {
-    String::from_utf8(thread_rng().sample_iter(&Alphanumeric).take(30).collect())
+pub(crate) fn create_salt() -> String {
+    utils::get_random_string(30)
 }
 
 /// 密码加密

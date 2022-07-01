@@ -1,11 +1,13 @@
 mod config;
+mod data_models;
 mod db;
 mod errors;
-mod data_models;
 mod models;
+mod utils;
 
 use crate::config::WepoConfig;
 use ::config::Config;
+use actix_redis::RedisActor;
 use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use log::info;
@@ -26,12 +28,17 @@ async fn main() -> std::io::Result<()> {
 
     let pool = config.pg.create_pool(None, NoTls).unwrap();
 
+    let redis_addr = RedisActor::start(config.redis_addr.clone());
+
     let server = HttpServer::new(move || {
-        App::new().app_data(web::Data::new(pool.clone())).service(
-            web::scope("/v1")
-                .service(models::user::handler::register_user)
-                .service(models::user::handler::user_login),
-        )
+        App::new()
+            .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(redis_addr.clone()))
+            .service(
+                web::scope("/v1")
+                    .service(models::user::handler::register_user)
+                    .service(models::user::handler::user_login),
+            )
     })
     .bind(config.server_addr.clone())?
     .workers(2)

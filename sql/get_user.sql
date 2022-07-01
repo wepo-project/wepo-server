@@ -1,1 +1,1 @@
-SELECT id, nick, pwd, _salt from wepo.users where nick = $1
+SELECT * from wepo.users where nick = $1

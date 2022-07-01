@@ -1,3 +1,4 @@
+use actix::MailboxError;
 use actix_web::{HttpResponse, ResponseError};
 use deadpool_postgres::PoolError;
 use derive_more::{Display, From};
@@ -11,6 +12,7 @@ pub enum MyError {
     PGError(PGError),
     PGMError(PGMError),
     PoolError(PoolError),
+    MailboxError(MailboxError),
     OkError(i32),
 }
 
