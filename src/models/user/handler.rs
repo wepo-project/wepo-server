@@ -1,12 +1,14 @@
+use crate::{
+    db,
+    errors::MyError,
+    models::user::dto::{LoginResultDTO, LoginUserDTO, RegisterResultDTO, RegisterUserDTO},
+};
 
-use crate::{db, errors::MyError, models::user::dto::{RegisterUserDTO, LoginUserDTO, RegisterResultDTO, LoginResultDTO}, utils};
-use actix::Addr;
-use actix_redis::{RedisActor, Command, resp_array};
-use actix_web::{web, Error, HttpResponse, post, guard::Guard, dev::ServiceRequest};
+use actix_web::{dev::ServiceRequest, post, web, Error, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 use deadpool_postgres::{Client, Pool};
-use jsonwebtoken::{Header, Algorithm, EncodingKey, decode, DecodingKey, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use log::info;
 use serde::{Deserialize, Serialize};
 
@@ -35,7 +37,7 @@ pub async fn register_user(
 pub async fn user_login(
     user: web::Json<LoginUserDTO>,
     db_pool: web::Data<Pool>,
-    redis: web::Data<Addr<RedisActor>>
+    // redis: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let user_info: LoginUserDTO = user.into_inner();
 
@@ -56,32 +58,36 @@ pub async fn user_login(
     Ok(HttpResponse::Ok().json(result))
 }
 
-
 const JWT_SECRET: &[u8] = b"wepo_Jwt_Xecret";
 
-pub fn create_jwt(id: &i32, nick: &String) -> Result<String, MyError> {
-    let expiration = Utc::now().checked_add_signed(chrono::Duration::seconds(60))
-    .expect("valid timestamp")
-    .timestamp();
-    
+pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
+    let expiration = Utc::now()
+        .checked_add_signed(chrono::Duration::seconds(60))
+        .expect("valid timestamp")
+        .timestamp();
+
     let header = Header::new(Algorithm::HS512);
     let claims = Claims {
         sub: id.to_string(),
         exp: expiration as usize,
     };
 
-    jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(JWT_SECRET)).map_err(|_| MyError::JWTTokenCreationError)
+    jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(JWT_SECRET))
+        .map_err(|_| MyError::JWTTokenCreationError)
 }
 
 pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
     let token = auth.token();
-    let decoded = jsonwebtoken::decode::<Claims>(
+    let _decoded = jsonwebtoken::decode::<Claims>(
         token,
         &DecodingKey::from_secret(JWT_SECRET),
         &Validation::new(Algorithm::HS512),
-    ).map_err(|_| MyError::JWTTokenError)?;
+    )
+    .map_err(|_| MyError::JWTTokenError)?;
+
+    info!("{:?}", _decoded);
     Ok(req)
-} 
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Claims {
