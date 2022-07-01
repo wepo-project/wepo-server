@@ -1,9 +1,14 @@
+
 use crate::{db, errors::MyError, models::user::dto::{RegisterUserDTO, LoginUserDTO, RegisterResultDTO, LoginResultDTO}, utils};
 use actix::Addr;
 use actix_redis::{RedisActor, Command, resp_array};
-use actix_web::{web, Error, HttpResponse, post};
+use actix_web::{web, Error, HttpResponse, post, guard::Guard, dev::ServiceRequest};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
+use chrono::Utc;
 use deadpool_postgres::{Client, Pool};
+use jsonwebtoken::{Header, Algorithm, EncodingKey, decode, DecodingKey, Validation};
 use log::info;
+use serde::{Deserialize, Serialize};
 
 #[post("/add_user")]
 /// 用户注册
@@ -38,7 +43,7 @@ pub async fn user_login(
 
     let user = db::user::validate_user(&client, user_info).await?;
 
-    let token = utils::get_random_string(12);
+    let token = format!("Bearer {}", create_jwt(&user.id, &user.nick)?);
 
     let result = LoginResultDTO {
         id: user.id,
@@ -48,10 +53,48 @@ pub async fn user_login(
 
     info!("User Login:{:?}", result);
 
-    // 设置token到redis上
-    let _res = redis.send(Command(resp_array![
-        "SET", format!("player:{}", user.id), token
-    ])).await.map_err(MyError::MailboxError);
-
     Ok(HttpResponse::Ok().json(result))
 }
+
+
+const JWT_SECRET: &[u8] = b"wepo_Jwt_Xecret";
+
+pub fn create_jwt(id: &i32, nick: &String) -> Result<String, MyError> {
+    let expiration = Utc::now().checked_add_signed(chrono::Duration::seconds(60))
+    .expect("valid timestamp")
+    .timestamp();
+    
+    let header = Header::new(Algorithm::HS512);
+    let claims = Claims {
+        sub: id.to_string(),
+        exp: expiration as usize,
+    };
+
+    jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(JWT_SECRET)).map_err(|_| MyError::JWTTokenCreationError)
+}
+
+pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
+    let token = auth.token();
+    let decoded = jsonwebtoken::decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(JWT_SECRET),
+        &Validation::new(Algorithm::HS512),
+    ).map_err(|_| MyError::JWTTokenError)?;
+    Ok(req)
+} 
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct Claims {
+    pub sub: String,
+    pub exp: usize,
+}
+
+// #[derive(Debug, Serialize, Deserialize)]
+// struct Claims {
+//     aud: String,         // Optional. Audience
+//     exp: usize,          // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
+//     iat: usize,          // Optional. Issued at (as UTC timestamp)
+//     iss: String,         // Optional. Issuer
+//     nbf: usize,          // Optional. Not Before (as UTC timestamp)
+//     sub: String,         // Optional. Subject (whom token refers to)
+// }

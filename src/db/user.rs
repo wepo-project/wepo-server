@@ -1,8 +1,6 @@
 use crate::{models::user::dto::{LoginUserDTO, RegisterUserDTO}, errors::MyError, data_models::User, utils};
 use deadpool_postgres::Client;
 use log::info;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
 use tokio_pg_mapper::FromTokioPostgresRow;
 
 /// 数据库添加用户
@@ -83,6 +81,6 @@ mod test {
 
     #[test]
     fn salt() {
-        println!("{}", create_salt().unwrap());
+        println!("{}", create_salt());
     }
 }

@@ -6,9 +6,13 @@ mod models;
 mod utils;
 
 use crate::config::WepoConfig;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use ::config::Config;
 use actix_redis::RedisActor;
-use actix_web::{web, App, HttpServer};
+use actix_web::{
+    web,
+    App, HttpServer,
+};
 use dotenv::dotenv;
 use log::info;
 use tokio_postgres::NoTls;
@@ -31,13 +35,22 @@ async fn main() -> std::io::Result<()> {
     let redis_addr = RedisActor::start(config.redis_addr.clone());
 
     let server = HttpServer::new(move || {
+        let auth = HttpAuthentication::bearer(models::user::handler::bearer_handle);
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(redis_addr.clone()))
             .service(
                 web::scope("/v1")
-                    .service(models::user::handler::register_user)
-                    .service(models::user::handler::user_login),
+                    .service(
+                        web::scope("/user")
+                        .service(models::user::handler::register_user)
+                        .service(models::user::handler::user_login),
+                    )
+                    .service(
+                        web::scope("/post")
+                            .wrap(auth)
+                            .service(models::post::handler::add_post),
+                    )
             )
     })
     .bind(config.server_addr.clone())?
@@ -49,6 +62,7 @@ async fn main() -> std::io::Result<()> {
     server.await
 }
 
+/// 初始化日志
 pub fn init_logger() {
     use chrono::Local;
     use std::io::Write;
