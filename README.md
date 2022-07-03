@@ -29,6 +29,12 @@ psql -f sql/schema.sql wepo -U postgres
 
 ### 4. 赋予权限
 
+**切换到 wepo 数据库**
+
+```shell
+\c wepo
+```
+
 ```sql
 GRANT ALL PRIVILEGES ON SCHEMA wepo TO ww;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA wepo to ww;
@@ -39,6 +45,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA wepo to ww;
 
 ```ini
 SERVER_ADDR=127.0.0.1:8080
+REDIS_ADDR=127.0.0.1:6379
 PG.USER=ww
 PG.PASSWORD=ww
 PG.HOST=127.0.0.1

@@ -17,7 +17,7 @@ log = "0.4.17"
 serde = { version="1.0.137", features=["derive"] }
 tokio-pg-mapper = "0.2.0"
 tokio-pg-mapper-derive = "0.2.0"
-tokio-postgres = { version="0.7.6", features=["with-chrono-0_4"]}
+tokio-postgres = { version="0.7.6", features=["with-chrono-0_4", "with-uuid-1"]}
 sha256 = "1.0.3"
 rand = "0.8.5"
 serde_postgres = "0.2.0"
@@ -28,3 +28,5 @@ redis-async = "0.12.1"
 serde_json = "1.0.82"
 jsonwebtoken = "8.1.1"
 actix-web-httpauth = "0.6.0"
+futures = "0.3.21"
+uuid = { version="1.1.2", features=["v4", "serde"]}

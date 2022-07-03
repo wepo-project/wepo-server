@@ -4,6 +4,7 @@ mod db;
 mod errors;
 mod models;
 mod utils;
+mod base;
 
 use crate::config::WepoConfig;
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -49,7 +50,8 @@ async fn main() -> std::io::Result<()> {
                     .service(
                         web::scope("/post")
                             .wrap(auth)
-                            .service(models::post::handler::add_post),
+                            .service(models::post::handler::add_post)
+                            .service(models::post::handler::delete_post),
                     )
             )
     })

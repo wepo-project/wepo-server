@@ -1,11 +1,12 @@
-// use actix_web::http::header::Date;
-
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
+// use tokio_postgres::row::Row;
+// use uuid::Uuid;
 use tokio_pg_mapper_derive::PostgresMapper;
+use uuid::Uuid;
 
-#[derive(Debug, Deserialize, PostgresMapper, Serialize)]
-#[pg_mapper(table = "users")] // singular 'user' is a keyword..
+#[derive(Debug, Deserialize, Serialize, PostgresMapper)]
+#[pg_mapper(table = "users")]
 pub struct User {
     pub id: i32,
     pub nick: String,
@@ -14,12 +15,12 @@ pub struct User {
     pub create_time: NaiveDate,
 }
 
-#[derive(Deserialize, PostgresMapper, Serialize)]
-#[pg_mapper(table = "posts")] // singular 'user' is a keyword..
+#[derive(Debug, Deserialize, Serialize, PostgresMapper)]
+#[pg_mapper(table = "posts")]
 pub struct Post {
-    pub id: String,
+    pub id: Uuid,
     pub sender: i32,
     pub content: String,
-    pub create_time: i64,
+    pub create_time: NaiveDateTime,
     pub likes: i32,
 }

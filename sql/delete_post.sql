@@ -1,0 +1,1 @@
+DELETE FROM wepo.posts WHERE id = $1 and sender = $2

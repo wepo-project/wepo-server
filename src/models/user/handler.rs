@@ -1,10 +1,10 @@
 use crate::{
     db,
     errors::MyError,
-    models::user::dto::{LoginResultDTO, LoginUserDTO, RegisterResultDTO, RegisterUserDTO},
+    models::user::dto::{LoginResultDTO, LoginUserDTO, RegisterResultDTO, RegisterUserDTO}, base::user_info::UserInfo,
 };
 
-use actix_web::{dev::ServiceRequest, post, web, Error, HttpResponse};
+use actix_web::{dev::ServiceRequest, post, web, Error, HttpResponse, HttpMessage};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 use deadpool_postgres::{Client, Pool};
@@ -67,10 +67,7 @@ pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
         .timestamp();
 
     let header = Header::new(Algorithm::HS512);
-    let claims = Claims {
-        sub: id.to_string(),
-        exp: expiration as usize,
-    };
+    let claims = Claims::new(id, _nick, expiration as usize);
 
     jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(JWT_SECRET))
         .map_err(|_| MyError::JWTTokenCreationError)
@@ -78,21 +75,43 @@ pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
 
 pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
     let token = auth.token();
-    let _decoded = jsonwebtoken::decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(JWT_SECRET),
-        &Validation::new(Algorithm::HS512),
-    )
-    .map_err(|_| MyError::JWTTokenError)?;
+    let validation = Validation::new(Algorithm::HS512);
+    let key = DecodingKey::from_secret(JWT_SECRET);
+    let decoded = jsonwebtoken::decode::<Claims>(token, &key, &validation)
+        .map_err(|_| MyError::JWTTokenError)?;
 
-    info!("{:?}", _decoded);
+    // info!("{:?}", decoded);
+
+    // 添加进拓展值，后续的handler直接在参数中可以直接使用
+    req.extensions_mut().insert(decoded.claims.into_user_info());
+
     Ok(req)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct Claims {
+pub struct Claims {
+    iss: String,
     pub sub: String,
     pub exp: usize,
+    pub id: i32,
+}
+
+impl Claims {
+    pub(crate) fn new(id: &i32, nick: &String, exp: usize) -> Self {
+        Self {
+            iss: String::from("wepo"),
+            sub: nick.to_owned(),
+            id: *id,
+            exp,
+        }
+    }
+
+    pub fn into_user_info(self) -> UserInfo {
+        UserInfo {
+            id: self.id,
+            nick: self.sub,
+        }
+    }
 }
 
 // #[derive(Debug, Serialize, Deserialize)]
