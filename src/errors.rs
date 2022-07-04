@@ -6,11 +6,14 @@ use tokio_pg_mapper::Error as PGMError;
 use tokio_postgres::error::Error as PGError;
 use serde::{Serialize, Deserialize};
 
+use crate::base::resp::ResultResponse;
+
 #[derive(Display, From, Debug)]
 pub enum MyError {
     NotFound,
     UnAuthorized,
     JWTTokenCreationError,
+    FailError,
     JWTTokenError,
     PGError(PGError),
     PGMError(PGMError),
@@ -38,6 +41,7 @@ impl ResponseError for MyError {
             MyError::OkError(ref code) => {
                 HttpResponse::Ok().json(ErrorResponse::new(code))
             }
+            MyError::FailError => HttpResponse::Ok().json(ResultResponse::fail()),
             _ => HttpResponse::InternalServerError().finish(),
         }
     }

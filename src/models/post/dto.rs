@@ -6,6 +6,12 @@ pub struct AddPostDTO {
     pub content: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct AddPostResultDTO {
+    pub id: String,
+}
+
+
 
 #[derive(Deserialize, Serialize)]
 pub struct DelPostDTO {

@@ -1,9 +1,8 @@
-use actix_redis::RespError;
 use actix_web::{HttpResponse, post, web, delete};
 use deadpool_postgres::{Pool, Client};
 use log::info;
 
-use crate::{models::post::dto::AddPostDTO, errors::MyError, base::{user_info::UserInfo, resp::ResultResponse}, db::{self, post}};
+use crate::{models::post::dto::*, errors::MyError, base::{user_info::UserInfo, resp::ResultResponse}, db::{self, post}};
 
 use super::dto::DelPostDTO;
 
@@ -19,9 +18,11 @@ pub async fn add_post(
 
     let post = db::post::add_post(&user, &post_data, &client).await?;
 
-    info!("Post:{} from {}", post.id, user.id);
+    info!("New Post:{}", post.id);
 
-    Ok(HttpResponse::Ok().json(post))
+    let result = AddPostResultDTO { id: post.id.hyphenated().to_string() };
+
+    Ok(HttpResponse::Ok().json(result))
 }
 
 #[delete("/del_post")]

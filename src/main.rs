@@ -1,19 +1,16 @@
+mod base;
 mod config;
 mod data_models;
 mod db;
 mod errors;
 mod models;
 mod utils;
-mod base;
 
 use crate::config::WepoConfig;
-use actix_web_httpauth::middleware::HttpAuthentication;
 use ::config::Config;
 use actix_redis::RedisActor;
-use actix_web::{
-    web,
-    App, HttpServer,
-};
+use actix_web::{web, App, HttpServer};
+use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
 use log::info;
 use tokio_postgres::NoTls;
@@ -33,26 +30,26 @@ async fn main() -> std::io::Result<()> {
 
     let pool = config.pg.create_pool(None, NoTls).unwrap();
 
-    let redis_addr = RedisActor::start(config.redis_addr.clone());
+    // let redis_addr = RedisActor::start(config.redis_addr.clone());
 
     let server = HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(models::user::handler::bearer_handle);
         App::new()
             .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(redis_addr.clone()))
+            // .app_data(web::Data::new(redis_addr.clone()))
             .service(
                 web::scope("/v1")
                     .service(
                         web::scope("/user")
-                        .service(models::user::handler::register_user)
-                        .service(models::user::handler::user_login),
+                            .service(models::user::handler::register_user)
+                            .service(models::user::handler::user_login),
                     )
                     .service(
                         web::scope("/post")
                             .wrap(auth)
                             .service(models::post::handler::add_post)
                             .service(models::post::handler::delete_post),
-                    )
+                    ),
             )
     })
     .bind(config.server_addr.clone())?

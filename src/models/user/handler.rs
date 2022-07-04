@@ -33,7 +33,7 @@ pub async fn register_user(
 }
 
 #[post("/login")]
-/// 用户注册
+/// 用户登录
 pub async fn user_login(
     user: web::Json<LoginUserDTO>,
     db_pool: web::Data<Pool>,
