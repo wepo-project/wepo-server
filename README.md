@@ -22,9 +22,15 @@ CREATE DATABASE wepo OWNER ww;
 
 ### 3. 初始化数据库
 
-```shell
+```sh
+# 创建 schema 和 table
 psql -f sql/schema.sql wepo -U postgres
+
+# 创建 trigger 和 function
+psql -f sql/trigger.sql wepo -U postgres
 ```
+
+
 > postgres: 超级管理员，如果不是则替换
 
 ### 4. 赋予权限
