@@ -16,9 +16,6 @@ $$
 $$
 LANGUAGE plpgsql;
 
--- DROP TRIGGER IF EXISTS post_like_insert;
--- DROP TRIGGER IF EXISTS post_like_delete;
-
 CREATE TRIGGER post_like_insert AFTER INSERT ON wepo.post_likes
     FOR EACH ROW EXECUTE PROCEDURE post_like_add();
 

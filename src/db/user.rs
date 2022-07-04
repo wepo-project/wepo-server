@@ -52,7 +52,7 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<U
         .map(|row| User::from_row_ref(row).unwrap())
         .collect::<Vec<User>>()
         .pop()
-        .ok_or(MyError::FailError)?; // 没有该用户
+        .ok_or(MyError::FailResultError)?; // 没有该用户
 
     if let Some(_pwd) = &user.pwd {
         if let Some(_raw_pwd) = &user_info.pwd {

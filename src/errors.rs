@@ -4,6 +4,7 @@ use deadpool_postgres::PoolError;
 use derive_more::{Display, From};
 use tokio_pg_mapper::Error as PGMError;
 use tokio_postgres::error::Error as PGError;
+use actix_redis::Error as RedisError;
 use serde::{Serialize, Deserialize};
 
 use crate::base::resp::ResultResponse;
@@ -13,12 +14,13 @@ pub enum MyError {
     NotFound,
     UnAuthorized,
     JWTTokenCreationError,
-    FailError,
+    FailResultError,
     JWTTokenError,
     PGError(PGError),
     PGMError(PGMError),
     PoolError(PoolError),
     MailboxError(MailboxError),
+    RedisError(RedisError),
     OkError(i32),
 }
 
@@ -41,7 +43,7 @@ impl ResponseError for MyError {
             MyError::OkError(ref code) => {
                 HttpResponse::Ok().json(ErrorResponse::new(code))
             }
-            MyError::FailError => HttpResponse::Ok().json(ResultResponse::fail()),
+            MyError::FailResultError => HttpResponse::Ok().json(ResultResponse::fail()),
             _ => HttpResponse::InternalServerError().finish(),
         }
     }

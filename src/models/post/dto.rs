@@ -8,12 +8,22 @@ pub struct AddPostDTO {
 
 #[derive(Deserialize, Serialize)]
 pub struct AddPostResultDTO {
-    pub id: String,
+    pub id: Uuid,
 }
-
-
 
 #[derive(Deserialize, Serialize)]
 pub struct DelPostDTO {
+    pub id: Uuid,
+}
+
+
+#[derive(Deserialize, Serialize)]
+pub struct LikePostDTO {
+    pub id: Uuid,
+}
+
+
+#[derive(Deserialize, Serialize)]
+pub struct GetPostDTO {
     pub id: Uuid,
 }

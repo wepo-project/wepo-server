@@ -23,4 +23,5 @@ pub struct Post {
     pub content: String,
     pub create_time: NaiveDateTime,
     pub likes: i32,
+    // pub comments: i32,
 }

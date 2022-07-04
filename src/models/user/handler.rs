@@ -1,10 +1,6 @@
-use crate::{
-    db,
-    errors::MyError,
-    models::user::dto::{LoginResultDTO, LoginUserDTO, RegisterResultDTO, RegisterUserDTO}, base::user_info::UserInfo,
-};
+use crate::{base::user_info::UserInfo, db, errors::MyError, models::user::dto::*};
 
-use actix_web::{dev::ServiceRequest, post, web, Error, HttpResponse, HttpMessage};
+use actix_web::{dev::ServiceRequest, post, web, Error, HttpMessage, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 use deadpool_postgres::{Client, Pool};
@@ -62,7 +58,7 @@ const JWT_SECRET: &[u8] = b"wepo_Jwt_Xecret";
 
 pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
     let expiration = Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(60))
+        .checked_add_signed(chrono::Duration::seconds(3600))
         .expect("valid timestamp")
         .timestamp();
 
@@ -77,8 +73,10 @@ pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<Serv
     let token = auth.token();
     let validation = Validation::new(Algorithm::HS512);
     let key = DecodingKey::from_secret(JWT_SECRET);
-    let decoded = jsonwebtoken::decode::<Claims>(token, &key, &validation)
-        .map_err(|_| MyError::JWTTokenError)?;
+    let decoded = jsonwebtoken::decode::<Claims>(token, &key, &validation).map_err(|_| {
+        info!("token错误");
+        MyError::JWTTokenError
+    })?;
 
     // info!("{:?}", decoded);
 

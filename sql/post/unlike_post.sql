@@ -1,0 +1,1 @@
+DELETE FROM wepo.post_likes WHERE post_id = $1 and user_id = $2;

@@ -30,13 +30,13 @@ async fn main() -> std::io::Result<()> {
 
     let pool = config.pg.create_pool(None, NoTls).unwrap();
 
-    // let redis_addr = RedisActor::start(config.redis_addr.clone());
+    let redis_addr = RedisActor::start(config.redis_addr.clone());
 
     let server = HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(models::user::handler::bearer_handle);
         App::new()
             .app_data(web::Data::new(pool.clone()))
-            // .app_data(web::Data::new(redis_addr.clone()))
+            .app_data(web::Data::new(redis_addr.clone()))
             .service(
                 web::scope("/v1")
                     .service(
@@ -48,7 +48,10 @@ async fn main() -> std::io::Result<()> {
                         web::scope("/post")
                             .wrap(auth)
                             .service(models::post::handler::add_post)
-                            .service(models::post::handler::delete_post),
+                            .service(models::post::handler::delete_post)
+                            .service(models::post::handler::post_like)
+                            .service(models::post::handler::post_unlike)
+                            .service(models::post::handler::get_post),
                     ),
             )
     })
