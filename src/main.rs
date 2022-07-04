@@ -8,8 +8,9 @@ mod utils;
 
 use crate::config::WepoConfig;
 use ::config::Config;
+use actix_cors::Cors;
 use actix_redis::RedisActor;
-use actix_web::{web, App, HttpServer};
+use actix_web::{http, web, App, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
 use log::info;
@@ -28,13 +29,21 @@ async fn main() -> std::io::Result<()> {
 
     let config: WepoConfig = config_.try_deserialize().unwrap();
 
-    let pool = config.pg.create_pool(None, NoTls).unwrap();
-
-    let redis_addr = RedisActor::start(config.redis_addr.clone());
-
     let server = HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(models::user::handler::bearer_handle);
+        let redis_addr = RedisActor::start(config.redis_addr.clone());
+        let pool = config.pg.create_pool(None, NoTls).unwrap();
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allowed_methods(vec!["GET", "POST", "DELETE", "PUT"])
+            .allowed_headers(vec![
+                http::header::AUTHORIZATION,
+                http::header::ACCEPT,
+                http::header::CONTENT_TYPE,
+            ])
+            .max_age(3600);
         App::new()
+            .wrap(cors)
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(redis_addr.clone()))
             .service(
