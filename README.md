@@ -1,8 +1,8 @@
 # Wepo 服务器
 
-> 1、安装 [PostgreSQL](https://www.postgresql.org/download/) 数据库
-> 
-> 2、安装 [Rust](https://www.rust-lang.org/tools/install) 编程语言
+- 安装 [PostgreSQL](https://www.postgresql.org/download/) 数据库
+- 安装 [Redis](https://redis.io/download/) 数据库
+- 安装 [Rust](https://www.rust-lang.org/tools/install) 编程语言
 
 ## 起步
 
@@ -30,14 +30,10 @@ psql -f sql/schema.sql wepo -U postgres
 psql -f sql/trigger.sql wepo -U postgres
 ```
 
-
-> postgres: 超级管理员，如果不是则替换
-
 ### 4. 赋予权限
 
-**切换到 wepo 数据库**
-
-```shell
+```sh
+# 切换到 wepo 数据库
 \c wepo
 ```
 
@@ -62,14 +58,22 @@ PG.POOL.MAX_SIZE=16
 
 ### 6. 运行服务器
 
-直接运行
-
-```shell
+```sh
 cargo run
 ```
 
-自动重新加载开发服务器 ([cargo-watch](https://github.com/watchexec/cargo-watch))
+自动重新加载开发服务器 (需要先安装 [cargo-watch](https://github.com/watchexec/cargo-watch) )
 
-```shell
+```sh
 cargo watch -x 'run'
+```
+
+### 7. 运行客户端（精简测试版）
+
+```sh
+cd test-client
+# 安装依赖 或者使用npm、pnpm
+yarn install
+# 运行
+yarn dev
 ```
