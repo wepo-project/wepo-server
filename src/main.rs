@@ -7,10 +7,14 @@ mod models;
 mod utils;
 
 use crate::config::WepoConfig;
+use crate::{
+    models::post::handler as PostHandler,
+    models::user::handler as UserHandler,
+};
 use ::config::Config;
 use actix_cors::Cors;
 use actix_redis::RedisActor;
-use actix_web::{http, web, App, HttpServer};
+use actix_web::{http, web::{self, get, post, delete}, App, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
 use log::info;
@@ -18,7 +22,6 @@ use tokio_postgres::NoTls;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    utils::clean_terminal();
     init_logger();
 
     dotenv().ok();
@@ -52,22 +55,22 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/v1")
                     .service(
                         web::scope("/user")
-                            .service(models::user::handler::register_user)
-                            .service(models::user::handler::user_login),
+                            .route("/add_user", post().to(UserHandler::register_user))
+                            .route("/login", post().to(UserHandler::user_login)),
                     )
                     .service(
                         web::scope("/post")
-                            .wrap(auth)
-                            .service(models::post::handler::add_post)
-                            .service(models::post::handler::delete_post)
-                            .service(models::post::handler::post_like)
-                            .service(models::post::handler::post_unlike)
-                            .service(models::post::handler::get_post),
+                            .route("/add_post", post().to(PostHandler::add_post))
+                            .route("/del_post", delete().to(PostHandler::delete_post))
+                            .route("/like", get().to(PostHandler::post_like))
+                            .route("/unlike", get().to(PostHandler::post_unlike))
+                            .route("/get_post", get().to(PostHandler::get_post))
+                            .route("/my_post", post().to(PostHandler::my_post))
+                            .wrap(auth),
                     ),
             )
     })
     .bind(config.server_addr.clone())?
-    .workers(2)
     .run();
 
     info!("Server running at http://{}/", config.server_addr);

@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const Authorization = "Authorization";
+
 const client = axios.create({
   baseURL: "http://127.0.0.1:8080/v1",
 });
@@ -29,7 +31,7 @@ export const setToken = (token: string) => {
   if (typeof token !== 'string') {
     console.error("Setting token failed!", token);
   }
-  client.defaults.headers.common["Authorization"] = token;
+  client.defaults.headers.common[Authorization] = token;
   localStorage.setItem('_t', token);
 }
 
@@ -43,6 +45,10 @@ export const setTokenFromLocalStorage = () => {
 }
 
 export const removeToken = (token: string) => {
-  delete client.defaults.headers.common["Authorization"];
+  delete client.defaults.headers.common[Authorization];
   localStorage.removeItem('_t');
 }
+
+export const isAuth = () => client.defaults.headers.common[Authorization] != null;
+
+(window as any).client = client;

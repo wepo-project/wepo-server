@@ -1,7 +1,7 @@
 
 use actix::Addr;
 use actix_redis::RedisActor;
-use actix_web::{delete, get, post, web, Error, HttpResponse};
+use actix_web::{web, Error, HttpResponse};
 use deadpool_postgres::{Client, Pool};
 use log::info;
 
@@ -14,7 +14,6 @@ use crate::{
 
 use super::dto::DelPostDTO;
 
-#[post("/add_post")]
 pub async fn add_post(
     user: UserInfo,
     post_body: web::Json<AddPostDTO>,
@@ -28,7 +27,6 @@ pub async fn add_post(
 }
 
 /// 删除po
-#[delete("/del_post")]
 pub async fn delete_post(
     user: UserInfo,
     del_body: web::Json<DelPostDTO>,
@@ -41,7 +39,6 @@ pub async fn delete_post(
 }
 
 /// 获取po
-#[get("/get_post")]
 pub async fn get_post(
     body: web::Json<GetPostDTO>,
     db_pool: web::Data<Pool>,
@@ -53,7 +50,6 @@ pub async fn get_post(
 }
 
 /// 点赞
-#[get("/like")]
 pub async fn post_like(
     user: UserInfo,
     like_body: web::Json<LikePostDTO>,
@@ -64,7 +60,6 @@ pub async fn post_like(
 }
 
 /// 取消点赞
-#[get("/unlike")]
 pub async fn post_unlike(
     user: UserInfo,
     like_body: web::Json<LikePostDTO>,
@@ -72,4 +67,22 @@ pub async fn post_unlike(
 ) -> Result<HttpResponse, Error> {
     let _ = db::post::unlike_post(&like_body.id, &user.id, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
+}
+
+/// 获取我的posts
+pub async fn my_post(
+    user: UserInfo,
+    body: web::Json<GetMyPostsDTO>,
+    db_pool: web::Data<Pool>,
+    redis_addr: web::Data<Addr<RedisActor>>,
+) -> Result<HttpResponse, Error> {
+    const LIMIT: i64 = 20;
+    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
+    let post = db::post::get_my_post(&&user.id, &body.page, &LIMIT, &client, &redis_addr).await?;
+    let next = post.len() >= LIMIT as usize;
+    Ok(HttpResponse::Ok().json(GetMyPostsResultDTO{
+        page: body.page,
+        next,
+        list: post,
+    }))
 }

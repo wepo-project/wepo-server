@@ -4,17 +4,20 @@ import NotFound from './components/NotFound.vue'
 import Login from './components/Login.vue'
 import Register from './components/Register.vue'
 import SendPost from './components/SendPost.vue'
-import { setTokenFromLocalStorage } from './axios/client'
+import MyPost from './components/MyPost.vue'
+import { isAuth, setTokenFromLocalStorage } from './axios/client'
 const routes = {
   '/': Home,
   '/login': Login,
   '/reg': Register,
   '/send': SendPost,
+  '/mine': MyPost,
 }
 export default {
   data() {
     return {
       currentPath: window.location.hash,
+      isAuth: false,
     }
   },
   computed: {
@@ -29,16 +32,27 @@ export default {
     if (!setTokenFromLocalStorage()) {
       window.location.href = "#/login";
     }
+    this.isAuth = isAuth();
+  },
+  methods: {
+    auth() {
+      this.isAuth = true;
+    }
   }
 }
 </script>
 
 <template>
   <div>
-    <a href="#/">Home</a> |
-    <a href="#/login">Login</a> |
-    <a href="#/reg">Register</a> |
-    <a href="#/send">Send Po</a> |
-    <component :is="currentView" />
+    <template v-if="!isAuth">
+      <a href="#/login">Login</a> |
+      <a href="#/reg">Register</a> |
+    </template>
+    <template v-else>
+      <a href="#/">Home</a> |
+      <a href="#/send">Send Post</a> |
+      <a href="#/mine">My Posts</a>
+    </template>
+    <component :is="currentView" @auth="auth"/>
   </div>
 </template>

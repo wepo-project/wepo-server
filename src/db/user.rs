@@ -1,6 +1,5 @@
 use crate::{models::user::dto::{LoginUserDTO, RegisterUserDTO}, errors::MyError, data_models::User, utils};
 use deadpool_postgres::Client;
-use futures::TryFutureExt;
 use log::info;
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_postgres::error::SqlState;
@@ -9,7 +8,7 @@ use tokio_postgres::error::SqlState;
 pub async fn add_user(client: &Client, mut user_info: RegisterUserDTO) -> Result<User, MyError> {
     let _stmt = include_str!("../../sql/add_user.sql");
     let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
-    let stmt = client.prepare(&_stmt).await.unwrap();
+    let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 
     let _salt = create_salt();
 
@@ -54,7 +53,7 @@ pub(crate) fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
 pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<User, MyError> {
     let _stmt = include_str!("../../sql/get_user.sql");
     // let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
-    let stmt = client.prepare(&_stmt).await.unwrap();
+    let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 
 
     let user = client

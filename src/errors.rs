@@ -12,7 +12,6 @@ use crate::base::resp::ResultResponse;
 #[derive(Display, From, Debug)]
 pub enum MyError {
     NotFound,
-    UnAuthorized,
     JWTTokenCreationError,
     FailResultError,
     JWTTokenError,
@@ -36,7 +35,7 @@ impl ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
         match *self {
             MyError::NotFound => HttpResponse::NotFound().finish(),
-            MyError::UnAuthorized => HttpResponse::BadRequest().finish(),
+            MyError::JWTTokenError => HttpResponse::BadRequest().finish(),
             MyError::PoolError(ref err) => {
                 HttpResponse::InternalServerError().body(err.to_string())
             }

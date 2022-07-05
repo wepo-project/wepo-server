@@ -1,6 +1,6 @@
 use crate::{base::user_info::UserInfo, db, errors::MyError, models::user::dto::*};
 
-use actix_web::{dev::ServiceRequest, post, web, Error, HttpMessage, HttpResponse};
+use actix_web::{dev::ServiceRequest, web, Error, HttpMessage, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 use deadpool_postgres::{Client, Pool};
@@ -8,15 +8,16 @@ use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use log::info;
 use serde::{Deserialize, Serialize};
 
-#[post("/add_user")]
 /// 用户注册
 pub async fn register_user(
-    user: web::Json<RegisterUserDTO>,
+    user_info: web::Json<RegisterUserDTO>,
     db_pool: web::Data<Pool>,
-) -> Result<HttpResponse, Error> {
-    let user_info: RegisterUserDTO = user.into_inner();
+) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let new_user = db::user::add_user(&client, user_info).await?;
+    if user_info.nick.is_empty() {
+        return Err(MyError::code(301));
+    }
+    let new_user = db::user::add_user(&client, user_info.0).await?;
     info!("creating a new user:{}", new_user.nick);
     let result = RegisterResultDTO {
         id: new_user.id,
@@ -25,7 +26,6 @@ pub async fn register_user(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[post("/login")]
 /// 用户登录
 pub async fn user_login(
     user: web::Json<LoginUserDTO>,
@@ -67,6 +67,7 @@ pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
 }
 
 pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
+    // info!("{}", req.uri());
     let token = auth.token();
     let validation = Validation::new(Algorithm::HS512);
     let key = DecodingKey::from_secret(JWT_SECRET);
@@ -77,7 +78,7 @@ pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<Serv
 
     // info!("{:?}", decoded);
 
-    // 添加进拓展值，后续的handler直接在参数中可以直接使用
+    // 添加进拓展值，后续的handler直接在参数中可以直接使用 UserInfo
     req.extensions_mut().insert(decoded.claims.into_user_info());
 
     Ok(req)

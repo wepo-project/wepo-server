@@ -1,18 +1,17 @@
 use actix::Addr;
 use actix_redis::{resp_array, Command, RedisActor, RespValue};
 use deadpool_postgres::Client;
-use futures::future::try_join;
+use futures::future::{join_all, try_join};
 use log::info;
+use tokio_pg_mapper::FromTokioPostgresRow;
 use uuid::Uuid;
 
 use crate::{
-    base::user_info::UserInfo,
+    base::{redis_key::PostRedisKey, user_info::UserInfo},
     data_models::Post,
     errors::MyError,
     models::post::dto::*,
 };
-
-use tokio_pg_mapper::FromTokioPostgresRow;
 
 /// 添加
 pub async fn add_post(
@@ -62,7 +61,7 @@ pub async fn get_post(
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Post, MyError> {
     let _stmt = include_str!("../../sql/post/get_post.sql");
-    let stmt = client.prepare(_stmt).await.unwrap();
+    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
     let mut post = client
         .query(&stmt, &[&post_id.hyphenated().to_string()])
         .await?
@@ -74,17 +73,8 @@ pub async fn get_post(
 
     info!("{:?}", post);
 
-    let key = PostRedisKey::new(post_id);
-    let val = redis_addr
-        .send(Command(resp_array!["GET", &key.likes_count]))
-        .await
-        .map_err(MyError::MailboxError)?
-        .map_err(MyError::RedisError)?;
-    info!("{:?}", val);
-
-    if let RespValue::Integer(num) = val {
-      post.likes = num as i32;
-    }
+    // 如果 同步失败，则直接返回
+    let _synced = post.sync_cache_data(redis_addr).await;
 
     Ok(post)
 }
@@ -147,17 +137,22 @@ pub async fn unlike_post(
     }
 }
 
-/// REDIS 键
-struct PostRedisKey {
-    pub likes: String,
-    pub likes_count: String,
-}
+pub async fn get_my_post(
+    user_id: &i32,
+    page: &i64,
+    limit: &i64,
+    client: &Client,
+    redis_addr: &Addr<RedisActor>,
+) -> Result<Vec<Post>, MyError> {
+    let _stmt = include_str!("../../sql/post/get_post_list.sql");
+    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let offset = limit * page;
+    let vec = client.query(&stmt, &[user_id, &limit, &offset]).await.unwrap();
 
-impl PostRedisKey {
-    fn new(post_id: &Uuid) -> Self {
-        Self {
-            likes: format!("post_like:{}", post_id),
-            likes_count: format!("post_like_count:{}", post_id),
-        }
-    }
+    Ok(join_all(vec.iter().map(|row| async {
+        let mut post = Post::from_row_ref(row).unwrap();
+        let _ = post.sync_cache_data(redis_addr).await;
+        post
+    }))
+    .await)
 }
