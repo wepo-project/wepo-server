@@ -18,6 +18,7 @@ use tokio_postgres::NoTls;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    utils::clean_terminal();
     init_logger();
 
     dotenv().ok();
@@ -28,11 +29,11 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     let config: WepoConfig = config_.try_deserialize().unwrap();
+    let redis_addr = RedisActor::start(config.redis_addr.clone());
+    let pool = config.pg.create_pool(None, NoTls).unwrap();
 
     let server = HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(models::user::handler::bearer_handle);
-        let redis_addr = RedisActor::start(config.redis_addr.clone());
-        let pool = config.pg.create_pool(None, NoTls).unwrap();
         let cors = Cors::default()
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST", "DELETE", "PUT"])
@@ -42,6 +43,7 @@ async fn main() -> std::io::Result<()> {
                 http::header::CONTENT_TYPE,
             ])
             .max_age(3600);
+
         App::new()
             .wrap(cors)
             .app_data(web::Data::new(pool.clone()))

@@ -1,16 +1,15 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
-import client, { setToken } from '../axios/client';
+import client from '../axios/client';
 
 const nick = ref('')
 const pwd = ref('')
 
-async function onLogin() {
-  const resp = await client.post("/user/login", {
+async function onRegister() {
+  const resp = await client.post("/user/add_user", {
     'nick': nick.value,
     'pwd': pwd.value,
   });
-  setToken(resp.data["token"]);
 }
 </script>
 
@@ -20,7 +19,7 @@ async function onLogin() {
     <br/>
     <input v-model.trim="pwd" type="password" placeholder="password"/>
     <div>
-      <input type="button" value="Login" @click="onLogin"/>
+      <input type="button" value="Register" @click="onRegister"/>
     </div>
   </div>
 </template>

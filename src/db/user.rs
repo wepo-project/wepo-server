@@ -1,7 +1,9 @@
 use crate::{models::user::dto::{LoginUserDTO, RegisterUserDTO}, errors::MyError, data_models::User, utils};
 use deadpool_postgres::Client;
+use futures::TryFutureExt;
 use log::info;
 use tokio_pg_mapper::FromTokioPostgresRow;
+use tokio_postgres::error::SqlState;
 
 /// 数据库添加用户
 pub async fn add_user(client: &Client, mut user_info: RegisterUserDTO) -> Result<User, MyError> {
@@ -15,16 +17,26 @@ pub async fn add_user(client: &Client, mut user_info: RegisterUserDTO) -> Result
         user_info.pwd = Some(pwd_encrypt(_pwd, &_salt));
     }
 
-    info!("creating a new user:{}", user_info.nick);
-
     client
         .query(&stmt, &[&user_info.nick, &user_info.pwd, &_salt])
-        .await?
+        .await
+        .map_err(|e| {
+            info!("{}", e);
+            if let Some(state) = e.code() {
+                match state {
+                    // 名字重复
+                    &SqlState::UNIQUE_VIOLATION => MyError::code(201),
+                    _ => MyError::PGError(e),
+                }
+            } else {
+                MyError::PGError(e)
+            }
+        })? // 注册失败
         .iter()
         .map(|row| User::from_row_ref(row).unwrap())
         .collect::<Vec<User>>()
         .pop()
-        .ok_or(MyError::NotFound) // more applicable for SELECTs
+        .ok_or(MyError::code(202))
 }
 
 /// 随机生成盐，长度为30

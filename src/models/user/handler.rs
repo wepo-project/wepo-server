@@ -15,16 +15,13 @@ pub async fn register_user(
     db_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, Error> {
     let user_info: RegisterUserDTO = user.into_inner();
-
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-
     let new_user = db::user::add_user(&client, user_info).await?;
-
+    info!("creating a new user:{}", new_user.nick);
     let result = RegisterResultDTO {
         id: new_user.id,
         nick: new_user.nick,
     };
-
     Ok(HttpResponse::Ok().json(result))
 }
 
