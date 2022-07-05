@@ -1,6 +1,7 @@
 use actix::Addr;
 use actix_redis::{resp_array, Command, RedisActor, RespValue};
 use chrono::{NaiveDate, NaiveDateTime};
+use log::info;
 use serde::{Deserialize, Serialize};
 // use tokio_postgres::row::Row;
 // use uuid::Uuid;
@@ -26,8 +27,9 @@ pub struct Post {
     pub sender: i32,
     pub content: String,
     pub create_time: NaiveDateTime,
-    pub likes: i32,
-    // pub comments: i32,
+    pub likes: i64,
+    pub comments: i64,
+    pub reposts: i64,
 }
 
 impl Post {
@@ -44,9 +46,15 @@ impl Post {
             .await
             .map_err(MyError::MailboxError)?
             .map_err(MyError::RedisError)?;
-
-        if let RespValue::Integer(num) = val {
-            self.likes = num as i32;
+        
+        if let RespValue::BulkString(utf8_arr) = val {
+            let str = String::from_utf8(utf8_arr);
+            if let Ok(str) = str {
+                let likes = str.parse::<i64>();
+                if let Ok(likes) = likes {
+                    self.likes = likes;
+                }
+            }
             Ok(true)
         } else {
             Ok(false)

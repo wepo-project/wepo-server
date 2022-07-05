@@ -52,7 +52,7 @@ pub async fn get_post(
 /// 点赞
 pub async fn post_like(
     user: UserInfo,
-    like_body: web::Json<LikePostDTO>,
+    like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let _ = db::post::like_post(&like_body.id, &user.id, &redis_addr).await?;
@@ -62,7 +62,7 @@ pub async fn post_like(
 /// 取消点赞
 pub async fn post_unlike(
     user: UserInfo,
-    like_body: web::Json<LikePostDTO>,
+    like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let _ = db::post::unlike_post(&like_body.id, &user.id, &redis_addr).await?;

@@ -41,11 +41,11 @@ CREATE TABLE IF NOT EXISTS wepo.posts
     -- 创建时间
     create_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- 点赞数量
-    likes integer NOT NULL DEFAULT 0,
+    likes bigint NOT NULL DEFAULT 0,
     -- 评论数量
-    comments integer NOT NULL DEFAULT 0,
+    comments bigint NOT NULL DEFAULT 0,
     -- 转发数量
-    reposts integer NOT NULL DEFAULT 0,
+    reposts bigint NOT NULL DEFAULT 0,
     CONSTRAINT posts_pkey PRIMARY KEY (id)
 );
 

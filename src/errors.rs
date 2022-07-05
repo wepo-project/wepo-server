@@ -35,7 +35,7 @@ impl ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
         match *self {
             MyError::NotFound => HttpResponse::NotFound().finish(),
-            MyError::JWTTokenError => HttpResponse::BadRequest().finish(),
+            MyError::JWTTokenError => HttpResponse::Unauthorized().finish(),
             MyError::PoolError(ref err) => {
                 HttpResponse::InternalServerError().body(err.to_string())
             }

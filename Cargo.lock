@@ -2294,6 +2294,7 @@ dependencies = [
  "actix-redis",
  "actix-web",
  "actix-web-httpauth",
+ "async-trait",
  "chrono",
  "config",
  "deadpool-postgres",

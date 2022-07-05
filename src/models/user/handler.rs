@@ -67,7 +67,6 @@ pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
 }
 
 pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
-    // info!("{}", req.uri());
     let token = auth.token();
     let validation = Validation::new(Algorithm::HS512);
     let key = DecodingKey::from_secret(JWT_SECRET);

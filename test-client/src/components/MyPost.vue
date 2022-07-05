@@ -22,15 +22,28 @@ const getNextPage = async () => {
 onMounted(async () => {
     await getNextPage();
 });
+
+const like = async (id: any, index: number) => {
+    const resp = await client.get('/post/like', {
+        params: {
+            'id': id
+        }
+    });
+    if (resp.data.succ) {
+        state.list[index].likes += 1;
+    }
+}
 </script>
 
 <template>
     <div>
         <div>MY POST</div>
-        <div v-for="(item) in state.list" :key="item.id">
+        <div v-for="(item, index) in state.list" :key="item.id">
             <!-- <div>id: {{item.id}}</div> -->
             <div>{{new Date(item.create_time).toLocaleString()}}</div>
-            <div>content: {{item.content}}</div>
+            <div>{{item.content}}</div>
+            <input type="button" :value="`likes: ${item.likes}`" @click="like(item.id, index)"/>
+            <br/>
             <br/>
         </div>
     </div>

@@ -22,6 +22,9 @@ client.interceptors.response.use((resp) => {
   console.log(`%c${(new Date()).toLocaleString()} [${resp.config.method}(${resp.status})]%o`, fontStyle.response, resp.config.url, resp.data)
   return resp;
 }, (err) => {
+  console.log("--------")
+  console.log(err.response.status);
+  console.log("--------")
   return Promise.reject(err)
 })
 

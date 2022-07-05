@@ -10,7 +10,7 @@ use crate::{
     base::{redis_key::PostRedisKey, user_info::UserInfo},
     data_models::Post,
     errors::MyError,
-    models::post::dto::*,
+    models::post::dto::*, utils::db::RedisActorHelper,
 };
 
 /// 添加
@@ -92,12 +92,21 @@ pub async fn like_post(
     redis_addr: &Addr<RedisActor>,
 ) -> Result<(), MyError> {
     let key = PostRedisKey::new(post_id);
+    // 判断是否重复点赞
+    let liked = redis_addr.sismember(&key.likes, &user_id.to_string()).await?;
+    if liked {
+        // 重复点赞
+        return Err(MyError::FailResultError);
+    }
+
     let ret = try_join(
+        // 添加进点赞集合
         redis_addr.send(Command(resp_array![
             "SADD",
-            key.likes,
+            &key.likes,
             &user_id.to_string()
         ])),
+        // 增加点赞数
         redis_addr.send(Command(resp_array!["INCR", key.likes_count])),
     )
     .await
@@ -119,14 +128,24 @@ pub async fn unlike_post(
     redis_addr: &Addr<RedisActor>,
 ) -> Result<(), MyError> {
     let key = PostRedisKey::new(post_id);
-    let cmd1 = redis_addr.send(Command(resp_array![
-        "SREM",
-        key.likes,
-        &user_id.to_string()
-    ]));
-    let cmd2 = redis_addr.send(Command(resp_array!["DECR", key.likes_count]));
 
-    let ret = try_join(cmd1, cmd2).await.map_err(MyError::MailboxError)?;
+    let liked = redis_addr.sismember(&key.likes, &user_id.to_string()).await?;
+
+    if !liked {
+        // 没有点赞，取消点赞则返回
+        return Err(MyError::FailResultError);
+    }
+
+    let ret = try_join(
+        redis_addr.send(Command(resp_array![
+            "SREM",
+            key.likes,
+            &user_id.to_string()
+        ])),
+        redis_addr.send(Command(resp_array!["DECR", key.likes_count])),
+    )
+    .await
+    .map_err(MyError::MailboxError)?;
 
     if let Err(e) = ret.0 {
         Err(MyError::RedisError(e))
@@ -137,6 +156,7 @@ pub async fn unlike_post(
     }
 }
 
+/// 查看我的post
 pub async fn get_my_post(
     user_id: &i32,
     page: &i64,
@@ -147,7 +167,10 @@ pub async fn get_my_post(
     let _stmt = include_str!("../../sql/post/get_post_list.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
     let offset = limit * page;
-    let vec = client.query(&stmt, &[user_id, &limit, &offset]).await.unwrap();
+    let vec = client
+        .query(&stmt, &[user_id, &limit, &offset])
+        .await
+        .unwrap();
 
     Ok(join_all(vec.iter().map(|row| async {
         let mut post = Post::from_row_ref(row).unwrap();

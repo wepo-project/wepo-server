@@ -1,6 +1,7 @@
 use uuid::Uuid;
 
 /// REDIS 键
+#[derive(Debug)]
 pub struct PostRedisKey {
     pub likes: String,
     pub likes_count: String,

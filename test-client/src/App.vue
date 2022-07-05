@@ -18,6 +18,7 @@ export default {
     return {
       currentPath: window.location.hash,
       isAuth: false,
+      loaded: false,
     }
   },
   computed: {
@@ -33,6 +34,7 @@ export default {
       window.location.href = "#/login";
     }
     this.isAuth = isAuth();
+    this.loaded = true;
   },
   methods: {
     auth() {
@@ -53,6 +55,6 @@ export default {
       <a href="#/send">Send Post</a> |
       <a href="#/mine">My Posts</a>
     </template>
-    <component :is="currentView" @auth="auth"/>
+    <component v-if="loaded" :is="currentView" @auth="auth"/>
   </div>
 </template>
