@@ -1,10 +1,15 @@
-use crate::{base::user_info::UserInfo, db, errors::MyError, models::user::dto::*};
+use crate::{
+    base::{token_str::TokenStr, user_info::UserInfo},
+    db,
+    errors::MyError,
+    models::user::dto::*,
+};
 
 use actix_web::{dev::ServiceRequest, web, Error, HttpMessage, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
 use deadpool_postgres::{Client, Pool};
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use log::info;
 use serde::{Deserialize, Serialize};
 
@@ -51,6 +56,13 @@ pub async fn user_login(
     Ok(HttpResponse::Ok().json(result))
 }
 
+pub async fn token_login(data: TokenStr) -> Result<HttpResponse, MyError> {
+    let data = validate_token(&data.token)?;
+    let user = data.claims.into_user_info();
+    let new_token = create_jwt(&user.id, &user.nick)?;
+    Ok(HttpResponse::Ok().json(new_token))
+}
+
 const JWT_SECRET: &[u8] = b"wepo_Jwt_Xecret";
 
 pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
@@ -68,18 +80,29 @@ pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
 
 pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
     let token = auth.token();
-    let validation = Validation::new(Algorithm::HS512);
-    let key = DecodingKey::from_secret(JWT_SECRET);
-    let decoded = jsonwebtoken::decode::<Claims>(token, &key, &validation).map_err(|_| {
-        info!("token错误");
-        MyError::JWTTokenError
-    })?;
-
-    // info!("{:?}", decoded);
-
+    let decoded = validate_token(token)?;
     // 添加进拓展值，后续的handler直接在参数中可以直接使用 UserInfo
     req.extensions_mut().insert(decoded.claims.into_user_info());
 
+    Ok(req)
+}
+
+fn validate_token(token: &str) -> Result<TokenData<Claims>, MyError> {
+    let validation = Validation::new(Algorithm::HS512);
+    let key = DecodingKey::from_secret(JWT_SECRET);
+    let data = jsonwebtoken::decode::<Claims>(token, &key, &validation) //
+        .map_err(|_e| {
+            info!("token错误");
+            MyError::JWTTokenError
+        })?;
+    Ok(data)
+}
+
+pub async fn token_addon_middleware(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
+    let token = auth.token();
+    req.extensions_mut().insert(TokenStr {
+        token: token.to_string(),
+    });
     Ok(req)
 }
 

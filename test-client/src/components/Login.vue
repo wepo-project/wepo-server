@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
-import client, { setToken } from '../axios/client';
+import client from '../axios/client';
 
 const nick = ref('')
 const pwd = ref('')
@@ -8,13 +8,11 @@ const pwd = ref('')
 const emit = defineEmits(["auth"]);
 
 async function onLogin() {
-  const resp = await client.post("/user/login", {
-    'nick': nick.value,
-    'pwd': pwd.value,
-  });
-  setToken(resp.data["token"]);
-  emit("auth");
-  window.location.href = "#/";
+  let succ = await client.loginWithAccount(nick.value, pwd.value);
+  if (succ) {
+    emit("auth");
+    window.location.href = "#/";
+  }
 }
 </script>
 

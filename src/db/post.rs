@@ -1,7 +1,7 @@
 use actix::Addr;
-use actix_redis::{resp_array, Command, RedisActor, RespValue};
+use actix_redis::RedisActor;
 use deadpool_postgres::Client;
-use futures::future::{join_all, try_join};
+use futures::future::join_all;
 use log::info;
 use tokio_pg_mapper::FromTokioPostgresRow;
 use uuid::Uuid;
@@ -10,7 +10,7 @@ use crate::{
     base::{redis_key::PostRedisKey, user_info::UserInfo},
     data_models::Post,
     errors::MyError,
-    models::post::dto::*, utils::db::RedisActorHelper,
+    models::post::dto::*, utils::db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper},
 };
 
 /// 添加
@@ -49,8 +49,8 @@ pub async fn del_post(
         .map(|_| {
             // 删除post的redis缓存数据
             let key = PostRedisKey::new(&del_data.id);
-            redis_addr.do_send(Command(resp_array!["DEL", key.likes]));
-            redis_addr.do_send(Command(resp_array!["DEL", key.likes_count]));
+            redis_addr.del(&key.likes);
+            redis_addr.del(&key.likes_count);
         })
         .map_err(MyError::PGError)
 }
@@ -93,32 +93,21 @@ pub async fn like_post(
 ) -> Result<(), MyError> {
     let key = PostRedisKey::new(post_id);
     // 判断是否重复点赞
-    let liked = redis_addr.sismember(&key.likes, &user_id.to_string()).await?;
-    if liked {
+    let liked = redis_addr.exec(
+        RedisCmd::sismember(&key.likes, &user_id.to_string())
+    ).await?;
+    if liked.int_to_bool() {
         // 重复点赞
         return Err(MyError::FailResultError);
     }
 
-    let ret = try_join(
+    redis_addr.exec_all(vec![
         // 添加进点赞集合
-        redis_addr.send(Command(resp_array![
-            "SADD",
-            &key.likes,
-            &user_id.to_string()
-        ])),
+        RedisCmd::sadd(&key.likes, &user_id.to_string()),
         // 增加点赞数
-        redis_addr.send(Command(resp_array!["INCR", key.likes_count])),
-    )
-    .await
-    .map_err(MyError::MailboxError)?;
-
-    if let Err(e) = ret.0 {
-        Err(MyError::RedisError(e))
-    } else if let Err(e) = ret.1 {
-        Err(MyError::RedisError(e))
-    } else {
-        Ok(())
-    }
+        RedisCmd::incr(&key.likes_count),
+    ]).await?;
+    Ok(())
 }
 
 /// 取消点赞
@@ -129,31 +118,22 @@ pub async fn unlike_post(
 ) -> Result<(), MyError> {
     let key = PostRedisKey::new(post_id);
 
-    let liked = redis_addr.sismember(&key.likes, &user_id.to_string()).await?;
+    let liked = redis_addr.exec(
+        RedisCmd::sismember(&key.likes, &user_id.to_string())
+    ).await?;
 
-    if !liked {
+    if !liked.int_to_bool() {
         // 没有点赞，取消点赞则返回
         return Err(MyError::FailResultError);
     }
 
-    let ret = try_join(
-        redis_addr.send(Command(resp_array![
-            "SREM",
-            key.likes,
-            &user_id.to_string()
-        ])),
-        redis_addr.send(Command(resp_array!["DECR", key.likes_count])),
-    )
-    .await
-    .map_err(MyError::MailboxError)?;
-
-    if let Err(e) = ret.0 {
-        Err(MyError::RedisError(e))
-    } else if let Err(e) = ret.1 {
-        Err(MyError::RedisError(e))
-    } else {
-        Ok(())
-    }
+    redis_addr.exec_all(vec![
+        // 移除出点赞集合
+        RedisCmd::srem(&key.likes, &user_id.to_string()),
+        // 减少点赞数
+        RedisCmd::decr(&key.likes_count),
+    ]).await?;
+    Ok(())
 }
 
 /// 查看我的post

@@ -1,5 +1,5 @@
 pub mod extension;
-pub mod db;
+pub mod db_helper;
 
 use rand::{thread_rng, Rng, distributions::Alphanumeric};
 

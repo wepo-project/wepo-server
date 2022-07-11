@@ -42,3 +42,4 @@ pub struct GetMyPostsResultDTO {
     pub next: bool,
     pub list: Vec<Post>,
 }
+

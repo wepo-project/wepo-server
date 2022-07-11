@@ -5,7 +5,7 @@ import Login from './components/Login.vue'
 import Register from './components/Register.vue'
 import SendPost from './components/SendPost.vue'
 import MyPost from './components/MyPost.vue'
-import { isAuth, setTokenFromLocalStorage } from './axios/client'
+import client from './axios/client'
 const routes = {
   '/': Home,
   '/login': Login,
@@ -17,7 +17,7 @@ export default {
   data() {
     return {
       currentPath: window.location.hash,
-      isAuth: false,
+      isLogined: false,
       loaded: false,
     }
   },
@@ -26,19 +26,23 @@ export default {
       return routes[this.currentPath.slice(1) || '/'] || NotFound
     }
   },
-  mounted() {
+  async mounted() {
     window.addEventListener('hashchange', () => {
       this.currentPath = window.location.hash
     })
-    if (!setTokenFromLocalStorage()) {
+    let succ = false;
+    try {
+      succ = await client.loginWithToken();
+    } catch(e) { console.error(e) }
+    if (!succ) {
       window.location.href = "#/login";
     }
-    this.isAuth = isAuth();
+    this.isLogined = client.isLogined;
     this.loaded = true;
   },
   methods: {
     auth() {
-      this.isAuth = true;
+      this.isLogined = true;
     }
   }
 }
@@ -46,7 +50,7 @@ export default {
 
 <template>
   <div>
-    <template v-if="!isAuth">
+    <template v-if="!isLogined">
       <a href="#/login">Login</a> |
       <a href="#/reg">Register</a> |
     </template>

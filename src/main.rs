@@ -54,6 +54,11 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/v1")
                     .service(
+                        web::scope("/token")
+                            .route("/login", get().to(UserHandler::token_login))
+                            .wrap(HttpAuthentication::bearer(models::user::handler::token_addon_middleware)),
+                    )
+                    .service(
                         web::scope("/user")
                             .route("/add_user", post().to(UserHandler::register_user))
                             .route("/login", post().to(UserHandler::user_login)),

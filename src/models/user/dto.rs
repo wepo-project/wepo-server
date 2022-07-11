@@ -27,3 +27,4 @@ pub struct LoginResultDTO {
     pub nick: String,
     pub token: String,
 }
+

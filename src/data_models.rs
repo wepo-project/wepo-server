@@ -1,14 +1,13 @@
 use actix::Addr;
-use actix_redis::{resp_array, Command, RedisActor, RespValue};
+use actix_redis::RedisActor;
 use chrono::{NaiveDate, NaiveDateTime};
-use log::info;
 use serde::{Deserialize, Serialize};
 // use tokio_postgres::row::Row;
 // use uuid::Uuid;
 use tokio_pg_mapper_derive::PostgresMapper;
 use uuid::Uuid;
 
-use crate::{base::redis_key::PostRedisKey, errors::MyError};
+use crate::{base::redis_key::PostRedisKey, utils::db_helper::RedisActorHelper};
 
 #[derive(Debug, Deserialize, Serialize, PostgresMapper)]
 #[pg_mapper(table = "users")]
@@ -39,25 +38,12 @@ impl Post {
     pub async fn sync_cache_data(
         &mut self,
         redis_addr: &Addr<RedisActor>,
-    ) -> Result<bool, MyError> {
+    ) -> bool {
         let key = PostRedisKey::new(&self.id);
-        let val = redis_addr
-            .send(Command(resp_array!["GET", &key.likes_count]))
-            .await
-            .map_err(MyError::MailboxError)?
-            .map_err(MyError::RedisError)?;
-        
-        if let RespValue::BulkString(utf8_arr) = val {
-            let str = String::from_utf8(utf8_arr);
-            if let Ok(str) = str {
-                let likes = str.parse::<i64>();
-                if let Ok(likes) = likes {
-                    self.likes = likes;
-                }
-            }
-            Ok(true)
-        } else {
-            Ok(false)
+        let like = redis_addr.get_i64(&key.likes_count).await;
+        if let Ok(num) = like {
+            self.likes = num;
         }
+        like.is_ok()
     }
 }
