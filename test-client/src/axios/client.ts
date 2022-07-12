@@ -1,38 +1,64 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { Method, AxiosPromise, AxiosRequestConfig } from "axios";
+import JsonBigInt from "json-bigint"
+
+interface NetClient {
+  send(method: Method, model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
+  post(model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
+  get(model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
+  isLogined(): boolean
+  loginWithAccount(nick: string, pwd: string): Promise<boolean>
+  loginWithToken(): Promise<boolean>
+}
+
+const client: NetClient = {} as NetClient;
 
 const Authorization = "Authorization";
 
-const client = axios.create({
+const axiosInstance = axios.create({
   baseURL: "http://127.0.0.1:8080/v1",
-}) as NetClient;
+});
 
 const fontStyle = {
   request: 'color:orange;font-size:10px;',
   response: 'color:blue;font-size:10px;'
 }
 
-client.interceptors.request.use((config) => {
-  console.log(`%c${(new Date()).toLocaleString()} [${config.method}]%o`, fontStyle.request, config.url, config.data);
+axiosInstance.interceptors.request.use((config) => {
+  // config.transformRequest = [data => data]
+  console.log(`%c${(new Date()).toLocaleString()} [${config.method}]%o`, fontStyle.request, config.url, config.method == "get" ? config.params : config.data);
   return config;
 }, (err) => {
   return Promise.reject(err)
 })
 
-client.interceptors.response.use((resp) => {
+axiosInstance.interceptors.response.use((resp) => {
   console.log(`%c${(new Date()).toLocaleString()} [${resp.config.method}(${resp.status})]%o`, fontStyle.response, resp.config.url, resp.data)
   return resp;
 }, (err) => {
-  if (err.response.status == 401) {
+  // console.log(err);
+  if (err.response && err.response.status == 401) {
     console.log("登录失效")
   }
   return Promise.reject(err)
 })
 
-interface NetClient extends AxiosInstance {
-  isLogined(): boolean
-  loginWithAccount(nick: string, pwd: string): Promise<boolean>
-  loginWithToken(): Promise<boolean>
-}
+// 转换big int
+axiosInstance.defaults.transformResponse = [data => {
+  if (data) {
+    try {
+      return JsonBigInt.parse(data)
+    } catch(e) {
+      console.error(e)
+      return data
+    }
+  }
+  return data
+}]
+
+// axiosInstance.defaults.transformRequest = [(data, headers) => {
+//   console.log(typeof data?.origin);
+//   return JSON.stringify(data)
+// }]
 
 export default client;
 
@@ -43,17 +69,36 @@ const saveToken = (token: string): boolean => {
     console.error("Setting token failed!", token);
     return false;
   }
-  client.defaults.headers.common[Authorization] = token;
+  axiosInstance.defaults.headers.common[Authorization] = token;
   localStorage.setItem('_t', token);
   console.log("登录成功");
   return true;
 }
 
 /**
+ * 发送命令
+ * @param method 
+ * @param model 
+ * @param func 
+ * @param config 
+ * @returns 
+ */
+client.send = (method: Method, model: string, func: string, config?: AxiosRequestConfig) => {
+  return axiosInstance({
+    ...config,
+    method: method,
+    url: `/${model}/${func}`,
+  });
+}
+
+client.get = client.send.bind(client, 'GET');
+client.post = client.send.bind(client, 'POST');
+
+/**
  * 
  * @returns 是否登录
  */
-client.isLogined = () => client.defaults.headers.common[Authorization] != null;
+client.isLogined = () => axiosInstance.defaults.headers.common[Authorization] != null;
 
 /**
  * 账号登录
@@ -61,7 +106,9 @@ client.isLogined = () => client.defaults.headers.common[Authorization] != null;
  * @param pwd 
  */
 client.loginWithAccount = async (nick: string, pwd: string): Promise<boolean> => {
-  const resp = await client.post("/user/login", { nick, pwd });
+  const resp = await client.post('user', 'login', {
+    data: { nick, pwd }
+  });
   return saveToken(resp.data["token"]);
 }
 
@@ -71,7 +118,7 @@ client.loginWithAccount = async (nick: string, pwd: string): Promise<boolean> =>
 client.loginWithToken = async (): Promise<boolean> => {
   const token = getSavedToken();
   if (token) {
-    const resp = await client.get('/token/login', {
+    const resp = await client.get('token', 'login', {
       headers: {
         [Authorization]: token
       }
