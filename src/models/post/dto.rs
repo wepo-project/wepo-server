@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::data_models::Post;
 
@@ -10,24 +9,24 @@ pub struct AddPostDTO {
 
 #[derive(Deserialize, Serialize)]
 pub struct AddPostResultDTO {
-    pub id: Uuid,
+    pub id: i64,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct DelPostDTO {
-    pub id: Uuid,
+    pub id: i64,
 }
 
 
 #[derive(Deserialize, Serialize)]
 pub struct LikePostDTO {
-    pub id: Uuid,
+    pub id: i64,
 }
 
 
 #[derive(Deserialize, Serialize)]
 pub struct GetPostDTO {
-    pub id: Uuid,
+    pub id: i64,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -43,3 +42,9 @@ pub struct GetMyPostsResultDTO {
     pub list: Vec<Post>,
 }
 
+
+#[derive(Deserialize, Serialize)]
+pub struct CommentPostDTO {
+    pub content: String,
+    pub origin: i64,
+}

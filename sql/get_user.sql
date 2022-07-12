@@ -1,1 +1,0 @@
-SELECT * from wepo.users where nick = $1

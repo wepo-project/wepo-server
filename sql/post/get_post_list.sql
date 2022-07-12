@@ -1,4 +1,4 @@
-SELECT * FROM wepo.posts
+SELECT * FROM main.posts
 WHERE sender = $1
 ORDER BY create_time DESC
 LIMIT $2 OFFSET $3;

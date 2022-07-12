@@ -1,11 +1,13 @@
+
 use actix::MailboxError;
+use actix_redis::Error as RedisError;
 use actix_web::{HttpResponse, ResponseError};
 use deadpool_postgres::PoolError;
 use derive_more::{Display, From};
+use log::info;
+use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::Error as PGMError;
 use tokio_postgres::error::Error as PGError;
-use actix_redis::Error as RedisError;
-use serde::{Serialize, Deserialize};
 
 use crate::base::resp::ResultResponse;
 
@@ -15,6 +17,9 @@ pub enum MyError {
     JWTTokenCreationError,
     FailResultError,
     JWTTokenError,
+    ParseError,
+    /// 互斥锁中毒错误
+    PoisonError,
     PGError(PGError),
     PGMError(PGMError),
     PoolError(PoolError),
@@ -33,15 +38,14 @@ impl std::error::Error for MyError {}
 
 impl ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
+        info!("{}", self);
         match *self {
             MyError::NotFound => HttpResponse::NotFound().finish(),
             MyError::JWTTokenError => HttpResponse::Unauthorized().finish(),
             MyError::PoolError(ref err) => {
                 HttpResponse::InternalServerError().body(err.to_string())
             }
-            MyError::OkError(ref code) => {
-                HttpResponse::Ok().json(ErrorResponse::new(code))
-            }
+            MyError::OkError(ref code) => HttpResponse::Ok().json(ErrorResponse::new(code)),
             MyError::FailResultError => HttpResponse::Ok().json(ResultResponse::fail()),
             _ => HttpResponse::InternalServerError().finish(),
         }
@@ -50,7 +54,7 @@ impl ResponseError for MyError {
 
 #[derive(Serialize, Deserialize)]
 pub struct ErrorResponse {
-    pub code: i32
+    pub code: i32,
 }
 
 impl ErrorResponse {

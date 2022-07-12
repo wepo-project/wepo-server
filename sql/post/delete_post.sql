@@ -1,1 +1,1 @@
-DELETE FROM wepo.posts WHERE id = $1 and sender = $2
+DELETE FROM main.posts WHERE id = $1 and sender = $2

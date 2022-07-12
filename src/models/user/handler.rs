@@ -2,9 +2,11 @@ use crate::{
     base::{token_str::TokenStr, user_info::UserInfo},
     db,
     errors::MyError,
-    models::user::dto::*,
+    models::user::dto::*, utils::db_helper::RedisActorHelper,
 };
 
+use actix::Addr;
+use actix_redis::RedisActor;
 use actix_web::{dev::ServiceRequest, web, Error, HttpMessage, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
@@ -35,7 +37,7 @@ pub async fn register_user(
 pub async fn user_login(
     user: web::Json<LoginUserDTO>,
     db_pool: web::Data<Pool>,
-    // redis: web::Data<Addr<RedisActor>>,
+    redis: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let user_info: LoginUserDTO = user.into_inner();
 
@@ -43,7 +45,9 @@ pub async fn user_login(
 
     let user = db::user::validate_user(&client, user_info).await?;
 
-    let token = format!("Bearer {}", create_jwt(&user.id, &user.nick)?);
+    let token = add_token_prefix(create_jwt(&user.id, &user.nick)?);
+
+    info!("User Login:{:?}", user);
 
     let result = LoginResultDTO {
         id: user.id,
@@ -51,15 +55,17 @@ pub async fn user_login(
         token: token.clone(),
     };
 
-    info!("User Login:{:?}", result);
-
     Ok(HttpResponse::Ok().json(result))
 }
 
-pub async fn token_login(data: TokenStr) -> Result<HttpResponse, MyError> {
+/// 用token登录
+pub async fn token_login(
+    data: TokenStr,
+) -> Result<HttpResponse, MyError> {
     let data = validate_token(&data.token)?;
     let user = data.claims.into_user_info();
-    let new_token = create_jwt(&user.id, &user.nick)?;
+    info!("User Login:{:?}", user);
+    let new_token = add_token_prefix(create_jwt(&user.id, &user.nick)?);
     Ok(HttpResponse::Ok().json(new_token))
 }
 
@@ -78,15 +84,21 @@ pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
         .map_err(|_| MyError::JWTTokenCreationError)
 }
 
-pub async fn bearer_handle(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
+/// 把token加上前缀
+fn add_token_prefix(token: String) -> String {
+    format!("Bearer {}", token)
+}
+
+/// 中间件的验证token方法
+pub async fn auth_validator(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
     let token = auth.token();
     let decoded = validate_token(token)?;
     // 添加进拓展值，后续的handler直接在参数中可以直接使用 UserInfo
     req.extensions_mut().insert(decoded.claims.into_user_info());
-
     Ok(req)
 }
 
+/// 验证token方法
 fn validate_token(token: &str) -> Result<TokenData<Claims>, MyError> {
     let validation = Validation::new(Algorithm::HS512);
     let key = DecodingKey::from_secret(JWT_SECRET);
@@ -98,6 +110,7 @@ fn validate_token(token: &str) -> Result<TokenData<Claims>, MyError> {
     Ok(data)
 }
 
+/// token登录时的中间件方法
 pub async fn token_addon_middleware(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
     let token = auth.token();
     req.extensions_mut().insert(TokenStr {

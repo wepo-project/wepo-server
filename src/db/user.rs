@@ -6,7 +6,7 @@ use tokio_postgres::error::SqlState;
 
 /// 数据库添加用户
 pub async fn add_user(client: &Client, mut user_info: RegisterUserDTO) -> Result<User, MyError> {
-    let _stmt = include_str!("../../sql/add_user.sql");
+    let _stmt = include_str!("../../sql/user/add_user.sql");
     let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 
@@ -51,7 +51,7 @@ pub(crate) fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
 
 /// 验证用户
 pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<User, MyError> {
-    let _stmt = include_str!("../../sql/get_user.sql");
+    let _stmt = include_str!("../../sql/user/get_user.sql");
     // let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 

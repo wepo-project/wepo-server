@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
     let pool = config.pg.create_pool(None, NoTls).unwrap();
 
     let server = HttpServer::new(move || {
-        let auth = HttpAuthentication::bearer(models::user::handler::bearer_handle);
+        let auth = HttpAuthentication::bearer(models::user::handler::auth_validator);
         let cors = Cors::default()
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST", "DELETE", "PUT"])
@@ -68,9 +68,10 @@ async fn main() -> std::io::Result<()> {
                             .route("/add_post", post().to(PostHandler::add_post))
                             .route("/del_post", delete().to(PostHandler::delete_post))
                             .route("/like", get().to(PostHandler::post_like))
-                            .route("/unlike", get().to(PostHandler::post_unlike))
+                            .route("/cancel_like", get().to(PostHandler::post_cancel_like))
                             .route("/get_post", get().to(PostHandler::get_post))
                             .route("/my_post", post().to(PostHandler::my_post))
+                            .route("/comment", post().to(PostHandler::comment_post))
                             .wrap(auth),
                     ),
             )

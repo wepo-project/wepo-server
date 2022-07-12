@@ -2,6 +2,7 @@ use actix::Addr;
 use actix_redis::{resp_array, Command, RedisActor, RespValue};
 use async_trait::async_trait;
 use futures::future::try_join_all;
+use redis_async::resp::FromResp;
 
 use crate::errors::MyError;
 
@@ -31,49 +32,53 @@ impl RedisActorHelper for Addr<RedisActor> {
         try_join_all(commands.into_iter().map(|command| self.exec(command))).await
     }
     async fn get_i64(&self, key: &String) -> Result<i64, MyError> {
-        let result = self.exec(cmd!["GET", key]).await?;
-        if let RespValue::BulkString(utf8_arr) = result {
-            // 成功获取到需要转换成字符串，然后转换成i64
-            let str = String::from_utf8(utf8_arr);
-            if let Ok(str) = str {
-                let likes = str.parse::<i64>();
-                if let Ok(likes) = likes {
-                    return Ok(likes);
-                }
-            }
-        }
-        Err(MyError::NotFound)
+        let result = self.exec(RedisCmd::get(key)).await?;
+        let int = String::from_resp(result)
+            .map_err(|_e| MyError::ParseError)?
+            .parse::<i64>()
+            .map_err(|_e| MyError::ParseError)?;
+        Ok(int)
     }
     fn del(&self, key: &String) -> () {
         self.do_send(cmd!["DEL", key]);
     }
 }
 
+
+macro_rules! cmd_define {
+    ($(
+        $(#[$outer:meta])*
+        ($i:ident, $($arg:ident$(,)?)+)
+    ),* $(,)?) => {
+        $(
+            $(#[$outer])*
+            pub fn $i($($arg: &String,)*) -> Command {
+                cmd![stringify!($i), $($arg,)*]
+            }
+        )*
+    };
+}
+
 pub struct RedisCmd;
 
 impl RedisCmd {
-    // 增加
-    pub fn incr(key: &String) -> Command {
-        cmd!["INCR", key]
-    }
-    // 减少
-    pub fn decr(key: &String) -> Command {
-        cmd!["DECR", key]
-    }
-    // 集合增加
-    pub fn sadd(key: &String, member: &String) -> Command {
-        cmd!["SADD", key, member]
-    }
-    // 是否在集合中
-    pub fn sismember(key: &String, member: &String) -> Command {
-        cmd!["SISMEMBER", key, member]
-    }
-    // 集合移除
-    pub fn srem(key: &String, member: &String) -> Command {
-        cmd!["SREM", key, member]
+    cmd_define! {
+        /// 获取
+        (get, key),
+        /// 自增
+        (incr, key),
+        /// 自减
+        (decr, key),
+        /// 集合增加
+        (sadd, key, member),
+        /// 是否在集合中
+        (sismember, key, member),
+        /// 集合移除
+        (srem, key, member),
+        /// 数组push
+        (lpush, key, value),
     }
 }
-
 
 pub trait RespValueRedisHelper {
     fn int_to_bool(&self) -> bool;

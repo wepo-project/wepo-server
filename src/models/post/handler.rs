@@ -40,7 +40,7 @@ pub async fn delete_post(
 
 /// 获取po
 pub async fn get_post(
-    body: web::Json<GetPostDTO>,
+    body: web::Query<GetPostDTO>,
     db_pool: web::Data<Pool>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
@@ -60,7 +60,7 @@ pub async fn post_like(
 }
 
 /// 取消点赞
-pub async fn post_unlike(
+pub async fn post_cancel_like(
     user: UserInfo,
     like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
@@ -85,4 +85,18 @@ pub async fn my_post(
         next,
         list: post,
     }))
+}
+
+/// 评论
+pub async fn comment_post(
+    user: UserInfo,
+    body: web::Json<CommentPostDTO>,
+    db_pool: web::Data<Pool>,
+    redis_addr: web::Data<Addr<RedisActor>>,
+) -> Result<HttpResponse, MyError> {
+    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
+    let post = db::post::comment_post(&user, &body, &client, &redis_addr).await?;
+    info!("New Post:{}", post.id);
+    let result = AddPostResultDTO { id: post.id };
+    Ok(HttpResponse::Ok().json(result))
 }

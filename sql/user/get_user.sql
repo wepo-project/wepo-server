@@ -1,0 +1,1 @@
+SELECT * from main.users where nick = $1

@@ -1,20 +1,20 @@
 
-DROP SCHEMA IF EXISTS wepo CASCADE;
+DROP SCHEMA IF EXISTS main CASCADE;
 
--- 创建 wepo schema
-CREATE SCHEMA wepo;
+-- 创建 main schema
+CREATE SCHEMA main;
 
 -- 备注
-COMMENT ON SCHEMA wepo
-    IS 'wepo schemas';
+COMMENT ON SCHEMA main
+    IS 'main schemas';
 
 -- 创建拓展
 CREATE EXTENSION IF NOT EXISTS "pgcrypto"
-    WITH SCHEMA wepo CASCADE;
+    WITH SCHEMA main CASCADE;
 
 
 -- 用户表 (id自增)
-CREATE TABLE IF NOT EXISTS wepo.users
+CREATE TABLE IF NOT EXISTS main.users
 (
     -- ID 自增
     id serial NOT NULL,
@@ -30,12 +30,12 @@ CREATE TABLE IF NOT EXISTS wepo.users
 );
 
 -- post表 sender外键约束，删除账号时自动删除其所有po文
-CREATE TABLE IF NOT EXISTS wepo.posts
+CREATE TABLE IF NOT EXISTS main.posts
 (
-    -- id 随机uuid
-    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    -- id 雪花id
+    id bigint NOT NULL,
     -- 发送者 外键
-    sender integer NOT NULL REFERENCES wepo.users(id) ON DELETE CASCADE,
+    sender integer NOT NULL REFERENCES main.users(id) ON DELETE CASCADE,
     -- 内容
     content text NOT NULL,
     -- 创建时间
@@ -44,18 +44,18 @@ CREATE TABLE IF NOT EXISTS wepo.posts
     likes bigint NOT NULL DEFAULT 0,
     -- 评论数量
     comments bigint NOT NULL DEFAULT 0,
-    -- 转发数量
-    reposts bigint NOT NULL DEFAULT 0,
+    -- 继承（评论）哪条po文
+    extends bigint REFERENCES main.posts(id),
     CONSTRAINT posts_pkey PRIMARY KEY (id)
 );
 
--- post like表
-CREATE TABLE IF NOT EXISTS wepo.post_likes
-(
-    -- po文id
-    post_id uuid NOT NULL REFERENCES wepo.posts(id) on DELETE CASCADE,
-    -- 用户id
-    user_id integer NOT NULL REFERENCES wepo.users(id) on DELETE CASCADE,
-    -- 两者为主键
-    PRIMARY KEY (post_id, user_id)
-);
+-- -- post like表
+-- CREATE TABLE IF NOT EXISTS main.post_likes
+-- (
+--     -- po文id
+--     post_id bigint NOT NULL REFERENCES main.posts(id) on DELETE CASCADE,
+--     -- 用户id
+--     user_id integer NOT NULL REFERENCES main.users(id) on DELETE CASCADE,
+--     -- 两者为主键
+--     PRIMARY KEY (post_id, user_id)
+-- );
