@@ -30,7 +30,6 @@ pub struct Post {
     pub create_time: NaiveDateTime,
     pub likes: i64,
     pub comments: i64,
-    pub reposts: i64,
     // #[serde(skip_serializing)]
     pub extends: Option<i64>,
 }
@@ -50,4 +49,22 @@ impl Post {
             self.comments = num;
         }
     }
+}
+
+
+#[derive(Debug, Deserialize, Serialize, PostgresMapper)]
+#[pg_mapper(table = "posts")]
+pub struct PostExtends {
+    pub id: i64,
+    pub nick: String,
+    pub content: String,
+    pub create_time: NaiveDateTime,
+    pub likes: i64,
+    pub comments: i64,
+    /// 转发的id
+    pub origin_id: Option<i64>,
+    /// 转发的内容
+    pub origin_content: Option<String>,
+    /// 转发人的昵称
+    pub origin_sender_nick: Option<String>,
 }
