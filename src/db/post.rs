@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use actix::Addr;
 use actix_redis::RedisActor;
 use deadpool_postgres::Client;
-use futures::future::join_all;
+use futures::future::{join_all, try_join_all};
 use log::info;
 use once_cell::sync::Lazy;
 use snowflake::SnowflakeIdBucket;
@@ -93,8 +93,8 @@ pub async fn get_post(
 
     info!("{:?}", post_ext);
 
-    // 如果 同步失败，则直接返回
-    let _ = post_ext.sync_cache_data(user, redis_addr).await;
+    // 同步
+    post_ext.sync_cache_data(user, redis_addr).await;
 
     // 获取评论
     let _stmt = include_str!("../../sql/post/get_comments.sql");
@@ -107,6 +107,9 @@ pub async fn get_post(
         .iter()
         .map(|row| Comment::from(row))
         .collect::<Vec<Comment>>();
+
+    // TODO 同步评论的点赞和评论数量
+    let a = comments.iter_mut().map(|comment| comment.sync_cache_data(user, redis_addr));
     
     // 添加进之前的数组
     post_ext.comments.append(&mut comments);
