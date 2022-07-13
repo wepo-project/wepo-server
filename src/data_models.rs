@@ -10,7 +10,7 @@ use async_trait::async_trait;
 
 use crate::{
     base::redis_key::RedisKey,
-    utils::{db_helper::RedisActorHelper, self}, traits::sync_cache::SyncCache,
+    utils::{db_helper::{RedisActorHelper, RedisCmd}, self}, traits::sync_cache::SyncCache,
 };
 
 #[derive(Debug, Deserialize, Serialize, PostgresMapper)]
@@ -32,12 +32,13 @@ pub struct Post {
     pub create_time: NaiveDateTime,
     pub likes: i64,
     pub comments: i64,
-    pub extends: Option<i64>,
+    pub extends: Option<String>,
 }
 
 impl From<&Row> for Post {
     fn from(row: &Row) -> Self {
         let id: i64 = row.get("id");
+        let extends: Option<i64> = row.get("extends");
         Self {
             id: id.to_string(),
             sender: row.get("sender"),
@@ -45,7 +46,7 @@ impl From<&Row> for Post {
             create_time: row.get("create_time"),
             likes: row.get("likes"),
             comments: row.get("comments"),
-            extends: row.get("extends"),
+            extends: extends.map(|id| id.to_string()),
         }
     }
 }
@@ -79,8 +80,10 @@ pub struct PostExtends {
     pub create_time: NaiveDateTime,
     pub likes: i64,
     pub comments: i64,
+    /// 我是否点赞过，从redis上获取
+    pub liked: bool,
     /// 转发的id
-    pub origin_id: Option<i64>,
+    pub origin_id: Option<String>,
     /// 转发的内容
     pub origin_content: Option<String>,
     /// 转发人的昵称
@@ -89,15 +92,18 @@ pub struct PostExtends {
 
 impl From<&Row> for PostExtends {
     fn from(row: &Row) -> Self {
+        // id需要转成字符串
         let id: i64 = row.get("id");
+        let origin_id: Option<i64> = row.get("origin_id");
         Self {
             id: id.to_string(),
             nick: row.get("nick"),
             content: row.get("content"),
             create_time: row.get("create_time"),
             likes: row.get("likes"),
+            liked: false,
             comments: row.get("comments"),
-            origin_id: row.get("origin_id"),
+            origin_id: origin_id.map(|id| id.to_string()),
             origin_content: row.get("origin_content"),
             origin_sender_nick: row.get("origin_sender_nick"),
         }
@@ -111,13 +117,13 @@ impl SyncCache for PostExtends {
     /// 返回 false 则表明没有
     async fn sync_cache_data(&mut self, redis_addr: &Addr<RedisActor>) -> () {
         // 拉取redis里缓存的数量
-        let id = utils::string_to_i64(&self.id);
-        // 点赞
-        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_like_count(&id)).await {
+        let id = &utils::string_to_i64(&self.id);
+        // 点赞数量
+        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_like_count(id)).await {
             self.likes = num;
         }
-        // 评论
-        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_comments_count(&id)).await {
+        // 评论数量
+        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_comments_count(id)).await {
             self.comments = num;
         }
     }

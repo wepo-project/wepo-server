@@ -40,12 +40,13 @@ pub async fn delete_post(
 
 /// 获取po
 pub async fn get_post(
+    user: UserInfo,
     body: web::Query<GetPostDTO>,
     db_pool: web::Data<Pool>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::get_post(&body.id, &client, &redis_addr).await?;
+    let post = db::post::get_post(&user, &body.id, &client, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(post))
 }
 
@@ -95,8 +96,8 @@ pub async fn comment_post(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::comment_post(&user, &body, &client, &redis_addr).await?;
-    info!("New Post:{}", post.id);
-    let result = AddPostResultDTO { id: post.id };
+    let post_id = db::post::comment_post(&user, &body, &client, &redis_addr).await?;
+    info!("New Comment:{}", post_id);
+    let result = AddPostResultDTO { id: post_id.to_string() };
     Ok(HttpResponse::Ok().json(result))
 }

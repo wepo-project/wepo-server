@@ -46,5 +46,5 @@ pub struct GetMyPostsResultDTO {
 #[derive(Deserialize, Serialize)]
 pub struct CommentPostDTO {
     pub content: String,
-    pub origin: i64,
+    pub origin_id: String,
 }

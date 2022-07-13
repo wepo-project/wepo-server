@@ -9,17 +9,16 @@ const props = defineProps<{
     content: string
     sender: number
     likes: number
+    liked: number
     comments: number
   } | undefined;
 }>();
-
-
 
 let id = props.item?.id.toString();
 
 const state = reactive({
   likes: props.item?.likes ?? 0,
-  liked: false, // 已经点赞
+  liked: props.item?.liked ?? false, // 已经点赞
   comments: props.item?.comments ?? 0,
 })
 
@@ -67,8 +66,7 @@ const cancel_like = async () => {
       <div>{{ item!.content }}</div>
       <input type="button" :value="`${state.liked ? 'liked' : 'like'}:${state.likes}`" class="action-button"
         :class="state.liked ? 'active' : ''" @click.stop="like" />
-      <input type="button" :value="`comment:${state.comments}`" class="action-button"
-        :class="state.liked ? 'active' : ''" />
+      <input type="button" :value="`comment:${state.comments}`" class="action-button" />
     </div>
   </template>
 </template>

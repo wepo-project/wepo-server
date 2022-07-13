@@ -22,7 +22,7 @@ async function onComment() {
     const resp = await client.post('post', 'comment', {
       data: {
         content: content.value,
-        origin: BigInt(id),
+        origin_id: id,
       }
     });
     if (resp.data.id) {
