@@ -8,18 +8,18 @@ const props = defineProps<{
     create_time: string
     content: string
     sender: number
-    likes: number
+    like_count: number
     liked: number
-    comments: number
+    comment_count: number
   } | undefined;
 }>();
 
 let id = props.item?.id.toString();
 
 const state = reactive({
-  likes: props.item?.likes ?? 0,
+  like_count: props.item?.like_count ?? 0,
   liked: props.item?.liked ?? false, // 已经点赞
-  comments: props.item?.comments ?? 0,
+  comment_count: props.item?.comment_count ?? 0,
 })
 
 const like = async () => {
@@ -31,7 +31,7 @@ const like = async () => {
   });
   if (resp.data.succ) {
     state.liked = true
-    state.likes += 1
+    state.like_count += 1
   }
   // 之前点过赞了
   else if (resp.data.code == 201) {
@@ -49,7 +49,7 @@ const cancel_like = async () => {
   });
   if (resp.data.succ || resp.data.code == 201) {
     state.liked = false
-    state.likes -= 1
+    state.like_count -= 1
   }
   // 没有点过赞
   else if (resp.data.code == 201) {
@@ -64,9 +64,9 @@ const cancel_like = async () => {
     <div @click="check_details">
       <div>{{ new Date(item!.create_time).toLocaleString() }}</div>
       <div>{{ item!.content }}</div>
-      <input type="button" :value="`${state.liked ? 'liked' : 'like'}:${state.likes}`" class="action-button"
+      <input type="button" :value="`${state.liked ? 'liked' : 'like'}:${state.like_count}`" class="action-button"
         :class="state.liked ? 'active' : ''" @click.stop="like" />
-      <input type="button" :value="`comment:${state.comments}`" class="action-button" />
+      <input type="button" :value="`comment:${state.comment_count}`" class="action-button" />
     </div>
   </template>
 </template>

@@ -79,7 +79,7 @@ pub async fn my_post(
 ) -> Result<HttpResponse, Error> {
     const LIMIT: i64 = 20;
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::get_my_posts(&&user.id, &body.page, &LIMIT, &client, &redis_addr).await?;
+    let post = db::post::get_my_posts(&user, &body.page, &LIMIT, &client, &redis_addr).await?;
     let next = post.len() >= LIMIT as usize;
     Ok(HttpResponse::Ok().json(GetMyPostsResultDTO{
         page: body.page,

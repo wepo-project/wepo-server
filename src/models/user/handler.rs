@@ -2,11 +2,9 @@ use crate::{
     base::{token_str::TokenStr, user_info::UserInfo},
     db,
     errors::MyError,
-    models::user::dto::*, utils::db_helper::RedisActorHelper,
+    models::user::dto::*,
 };
 
-use actix::Addr;
-use actix_redis::RedisActor;
 use actix_web::{dev::ServiceRequest, web, Error, HttpMessage, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::Utc;
@@ -37,7 +35,7 @@ pub async fn register_user(
 pub async fn user_login(
     user: web::Json<LoginUserDTO>,
     db_pool: web::Data<Pool>,
-    redis: web::Data<Addr<RedisActor>>,
+    // redis: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let user_info: LoginUserDTO = user.into_inner();
 

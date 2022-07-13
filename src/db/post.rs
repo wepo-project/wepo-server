@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use actix::Addr;
-use actix_redis::{RedisActor, RespValue};
+use actix_redis::RedisActor;
 use deadpool_postgres::Client;
 use futures::future::join_all;
 use log::info;
@@ -11,7 +11,7 @@ use tokio_pg_mapper::FromTokioPostgresRow;
 
 use crate::{
     base::{redis_key::RedisKey, user_info::UserInfo},
-    data_models::{Post, PostExtends},
+    data_models::{Post, PostExtends, Comment},
     errors::MyError,
     models::post::dto::*,
     traits::sync_cache::SyncCache,
@@ -94,32 +94,27 @@ pub async fn get_post(
     info!("{:?}", post_ext);
 
     // 如果 同步失败，则直接返回
-    let _ = post_ext.sync_cache_data(redis_addr).await;
+    let _ = post_ext.sync_cache_data(user, redis_addr).await;
 
-    // 获取我是否点赞
-    if let Ok(RespValue::Integer(num)) = redis_addr
-        .exec(RedisCmd::sismember(
-            &RedisKey::post_likes(post_id),
-            &user.id.to_string(),
-        ))
-        .await
-    {
-        if num == 1 {
-            // 已经点赞
-            post_ext.liked = true;
-        }
-    }
+    // 获取评论
+    let _stmt = include_str!("../../sql/post/get_comments.sql");
+    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let _skip = *PostExtends::max_comments() as i64;
+    let _offset: i64 = 0;
+    let mut comments = client
+        .query(&stmt, &[&post_ext.id, &_skip, &_offset])
+        .await?
+        .iter()
+        .map(|row| Comment::from(row))
+        .collect::<Vec<Comment>>();
+    
+    // 添加进之前的数组
+    post_ext.comments.append(&mut comments);
 
     Ok(post_ext)
 }
 
 /// 点赞
-/// 用户点赞 数据结构
-/// key: post_like:<post_id>
-/// value: {user_id}
-/// 点赞数
-/// key: post_like_count:<post_id>
-/// value: likes count
 pub async fn like_post(
     post_id: &i64,
     user_id: &i32,
@@ -176,7 +171,7 @@ pub async fn unlike_post(
 
 /// 查看我的post
 pub async fn get_my_posts(
-    user_id: &i32,
+    user: &UserInfo,
     page: &i64,
     limit: &i64,
     client: &Client,
@@ -186,14 +181,14 @@ pub async fn get_my_posts(
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
     let offset = limit * page;
     let vec = client
-        .query(&stmt, &[user_id, &limit, &offset])
+        .query(&stmt, &[&user.id, &limit, &offset])
         .await
         .unwrap();
 
     Ok(join_all(vec.iter().map(|row| async move {
         // move 把row引用带出闭包
         let mut post = Post::from(row);
-        let _ = post.sync_cache_data(redis_addr).await;
+        let _ = post.sync_cache_data(user, redis_addr).await;
         post
     }))
     .await)
