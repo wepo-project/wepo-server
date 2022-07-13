@@ -10,10 +10,10 @@ use tokio_pg_mapper::FromTokioPostgresRow;
 use snowflake::SnowflakeIdBucket;
 
 use crate::{
-    base::{redis_key::PostRedisKey, user_info::UserInfo},
-    data_models::Post,
+    base::{redis_key::RedisKey, user_info::UserInfo},
+    data_models::{Post, PostExtends},
     errors::MyError,
-    models::post::dto::*, utils::db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper},
+    models::post::dto::*, utils::db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper}, traits::sync_cache::SyncCache,
 };
 
 /// 雪花id生成器
@@ -26,17 +26,17 @@ pub async fn add_post(
     user: &UserInfo,
     post_data: &AddPostDTO,
     client: &Client,
-) -> Result<Post, MyError> {
+) -> Result<i64, MyError> {
     let _stmt = include_str!("../../sql/post/add_post.sql");
-    let _stmt = _stmt.replace("$table_fields", &Post::sql_table_fields());
+    // let _stmt = _stmt.replace("$table_fields", &Post::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
     let post_id = POST_ID_BUCKET.lock().map_err(|_| MyError::PoisonError)?.get_id();
     client
         .query(&stmt, &[&post_id, &user.id, &post_data.content])
         .await?
         .iter()
-        .map(|row| Post::from_row_ref(row).unwrap())
-        .collect::<Vec<Post>>()
+        .map(|row| row.get("id"))
+        .collect::<Vec<i64>>()
         .pop()
         .ok_or(MyError::NotFound)
 }
@@ -56,8 +56,8 @@ pub async fn del_post(
         .await
         .map(|_| {
             // 删除post的redis缓存数据
-            redis_addr.del(&PostRedisKey::likes(&del_data.id));
-            redis_addr.del(&PostRedisKey::likes_count(&del_data.id));
+            redis_addr.del(&RedisKey::post_likes(&del_data.id));
+            redis_addr.del(&RedisKey::post_like_count(&del_data.id));
         })
         .map_err(MyError::PGError)
 }
@@ -67,24 +67,24 @@ pub async fn get_post(
     post_id: &i64,
     client: &Client,
     redis_addr: &Addr<RedisActor>,
-) -> Result<Post, MyError> {
+) -> Result<PostExtends, MyError> {
     let _stmt = include_str!("../../sql/post/get_post.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
-    let mut post = client
+    let mut post_ext = client
         .query(&stmt, &[&post_id])
         .await?
         .iter()
-        .map(|row| Post::from_row_ref(row).unwrap())
-        .collect::<Vec<Post>>()
+        .map(|row| PostExtends::from(row))
+        .collect::<Vec<PostExtends>>()
         .pop()
         .ok_or(MyError::NotFound)?;
 
-    info!("{:?}", post);
+    info!("{:?}", post_ext);
 
     // 如果 同步失败，则直接返回
-    let _ = post.sync_cache_data(redis_addr).await;
+    let _ = post_ext.sync_cache_data(redis_addr).await;
 
-    Ok(post)
+    Ok(post_ext)
 }
 
 /// 点赞
@@ -99,7 +99,7 @@ pub async fn like_post(
     user_id: &i32,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<(), MyError> {
-    let likes_key = PostRedisKey::likes(post_id);
+    let likes_key = RedisKey::post_likes(post_id);
     // 判断是否重复点赞
     let liked = redis_addr.exec(
         RedisCmd::sismember(&likes_key, &user_id.to_string())
@@ -113,7 +113,7 @@ pub async fn like_post(
         // 添加进点赞集合
         RedisCmd::sadd(&likes_key, &user_id.to_string()),
         // 增加点赞数
-        RedisCmd::incr(&PostRedisKey::likes_count(post_id)),
+        RedisCmd::incr(&RedisKey::post_like_count(post_id)),
     ]).await?;
     Ok(())
 }
@@ -124,7 +124,7 @@ pub async fn unlike_post(
     user_id: &i32,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<(), MyError> {
-    let likes_key = PostRedisKey::likes(post_id);
+    let likes_key = RedisKey::post_likes(post_id);
 
     let liked = redis_addr.exec(
         RedisCmd::sismember(&likes_key, &user_id.to_string())
@@ -139,13 +139,13 @@ pub async fn unlike_post(
         // 移除出点赞集合
         RedisCmd::srem(&likes_key, &user_id.to_string()),
         // 减少点赞数
-        RedisCmd::decr(&PostRedisKey::likes_count(post_id)),
+        RedisCmd::decr(&RedisKey::post_like_count(post_id)),
     ]).await?;
     Ok(())
 }
 
 /// 查看我的post
-pub async fn get_my_post(
+pub async fn get_my_posts(
     user_id: &i32,
     page: &i64,
     limit: &i64,
@@ -160,8 +160,8 @@ pub async fn get_my_post(
         .await
         .unwrap();
 
-    Ok(join_all(vec.iter().map(|row| async {
-        let mut post = Post::from_row_ref(row).unwrap();
+    Ok(join_all(vec.iter().map(|row| async move { // move 把row引用带出闭包
+        let mut post = Post::from(row);
         let _ = post.sync_cache_data(redis_addr).await;
         post
     }))
@@ -186,9 +186,9 @@ pub async fn comment_post(
     // 评论成功 修改原本的post信息
     let _ret = redis_addr.exec_all(vec![
         // 添加进数组
-        RedisCmd::lpush(&PostRedisKey::comments(&data.origin), &post_id.to_string()),
+        RedisCmd::lpush(&RedisKey::post_comments(&data.origin), &post_id.to_string()),
         // 增加评论数
-        RedisCmd::incr(&PostRedisKey::comments_count(&data.origin)),
+        RedisCmd::incr(&RedisKey::post_comments_count(&data.origin)),
     ]).await;
 
 

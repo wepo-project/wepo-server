@@ -20,9 +20,9 @@ pub async fn add_post(
     db_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::add_post(&user, &post_body, &client).await?;
-    info!("New Post:{}", post.id);
-    let result = AddPostResultDTO { id: post.id };
+    let post_id = db::post::add_post(&user, &post_body, &client).await?;
+    info!("New Post:{}", post_id);
+    let result = AddPostResultDTO { id: post_id.to_string() };
     Ok(HttpResponse::Ok().json(result))
 }
 
@@ -78,7 +78,7 @@ pub async fn my_post(
 ) -> Result<HttpResponse, Error> {
     const LIMIT: i64 = 20;
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::get_my_post(&&user.id, &body.page, &LIMIT, &client, &redis_addr).await?;
+    let post = db::post::get_my_posts(&&user.id, &body.page, &LIMIT, &client, &redis_addr).await?;
     let next = post.len() >= LIMIT as usize;
     Ok(HttpResponse::Ok().json(GetMyPostsResultDTO{
         page: body.page,

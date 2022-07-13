@@ -16,13 +16,3 @@ pub struct PostData {
     pub extends: Option<i64>,
     pub extends_info: Option<Box<PostData>>,
 }
-
-impl PostData {
-    pub async fn new(post: &Post) -> Self {
-        
-        Self {
-            id: post.id.to_string(),
-
-        }
-    }
-}

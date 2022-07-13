@@ -5,10 +5,12 @@ use serde::{Deserialize, Serialize};
 // use tokio_postgres::row::Row;
 // use uuid::Uuid;
 use tokio_pg_mapper_derive::PostgresMapper;
+use tokio_postgres::Row;
+use async_trait::async_trait;
 
 use crate::{
-    base::redis_key::PostRedisKey,
-    utils::db_helper::RedisActorHelper,
+    base::redis_key::RedisKey,
+    utils::{db_helper::RedisActorHelper, self}, traits::sync_cache::SyncCache,
 };
 
 #[derive(Debug, Deserialize, Serialize, PostgresMapper)]
@@ -24,38 +26,54 @@ pub struct User {
 #[derive(Debug, Deserialize, Serialize, PostgresMapper)]
 #[pg_mapper(table = "posts")]
 pub struct Post {
-    pub id: i64,
+    pub id: String,
     pub sender: i32,
     pub content: String,
     pub create_time: NaiveDateTime,
     pub likes: i64,
     pub comments: i64,
-    // #[serde(skip_serializing)]
     pub extends: Option<i64>,
 }
 
-impl Post {
+impl From<&Row> for Post {
+    fn from(row: &Row) -> Self {
+        let id: i64 = row.get("id");
+        Self {
+            id: id.to_string(),
+            sender: row.get("sender"),
+            content: row.get("content"),
+            create_time: row.get("create_time"),
+            likes: row.get("likes"),
+            comments: row.get("comments"),
+            extends: row.get("extends"),
+        }
+    }
+}
+
+
+#[async_trait]
+impl SyncCache for Post {
     /// 把redis上的数据合并
     /// 返回 true 表明 redis 上有对应数据
     /// 返回 false 则表明没有
-    pub async fn sync_cache_data(&mut self, redis_addr: &Addr<RedisActor>) -> () {
+    async fn sync_cache_data(&mut self, redis_addr: &Addr<RedisActor>) -> () {
         // 拉取redis里缓存的数量
+        let id = utils::string_to_i64(&self.id);
         // 点赞
-        if let Ok(num) = redis_addr.get_i64(&PostRedisKey::likes_count(&self.id)).await {
+        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_like_count(&id)).await {
             self.likes = num;
         }
         // 评论
-        if let Ok(num) = redis_addr.get_i64(&PostRedisKey::comments_count(&self.id)).await {
+        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_comments_count(&id)).await {
             self.comments = num;
         }
     }
 }
 
 
-#[derive(Debug, Deserialize, Serialize, PostgresMapper)]
-#[pg_mapper(table = "posts")]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PostExtends {
-    pub id: i64,
+    pub id: String,
     pub nick: String,
     pub content: String,
     pub create_time: NaiveDateTime,
@@ -67,4 +85,40 @@ pub struct PostExtends {
     pub origin_content: Option<String>,
     /// 转发人的昵称
     pub origin_sender_nick: Option<String>,
+}
+
+impl From<&Row> for PostExtends {
+    fn from(row: &Row) -> Self {
+        let id: i64 = row.get("id");
+        Self {
+            id: id.to_string(),
+            nick: row.get("nick"),
+            content: row.get("content"),
+            create_time: row.get("create_time"),
+            likes: row.get("likes"),
+            comments: row.get("comments"),
+            origin_id: row.get("origin_id"),
+            origin_content: row.get("origin_content"),
+            origin_sender_nick: row.get("origin_sender_nick"),
+        }
+    }
+}
+
+#[async_trait]
+impl SyncCache for PostExtends {
+    /// 把redis上的数据合并
+    /// 返回 true 表明 redis 上有对应数据
+    /// 返回 false 则表明没有
+    async fn sync_cache_data(&mut self, redis_addr: &Addr<RedisActor>) -> () {
+        // 拉取redis里缓存的数量
+        let id = utils::string_to_i64(&self.id);
+        // 点赞
+        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_like_count(&id)).await {
+            self.likes = num;
+        }
+        // 评论
+        if let Ok(num) = redis_addr.get_i64(&RedisKey::post_comments_count(&id)).await {
+            self.comments = num;
+        }
+    }
 }

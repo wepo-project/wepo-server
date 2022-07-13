@@ -2,23 +2,32 @@
 
 /// REDIS 键
 #[derive(Debug)]
-pub struct PostRedisKey;
+pub struct RedisKey;
 
-impl PostRedisKey {
-    // 点赞集合
-    pub fn likes(post_id: &i64) -> String {
-        format!("post_like:{}", post_id)
-    }
-    /// 点赞数量
-    pub fn likes_count(post_id: &i64) -> String {
-        format!("post_like_count:{}", post_id)
-    }
-    /// 评论数组
-    pub fn comments(post_id: &i64) -> String {
-        format!("comments:{}", post_id)
-    }
-    /// 评论数量
-    pub fn comments_count(post_id: &i64) -> String {
-        format!("comment_count:{}", post_id)
+
+macro_rules! key_define {
+    ($(
+        $(#[$outer:meta])*
+        ($i:ident, $($arg:ident$(,)?)+)
+    ),* $(,)?) => {
+        $(
+            $(#[$outer])*
+            pub fn $i<S: ToString>($($arg: S,)*) -> String {
+                format!("{}:{}", stringify!($i), $($arg.to_string(),)*)
+            }
+        )*
+    };
+}
+
+impl RedisKey {
+    key_define! {
+        /// 点赞集合
+        (post_likes, post_id),
+        /// 点赞数量
+        (post_like_count, post_id),
+        /// 评论数组
+        (post_comments, post_id),
+        /// 评论数量
+        (post_comments_count, post_id),
     }
 }

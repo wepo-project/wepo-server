@@ -20,7 +20,9 @@ onMounted(async () => {
   }
   state.isLogined = client.isLogined();
 })
-
+const onAuth = () => {
+  state.isLogined = true;
+}
 </script>
 
 <template>
@@ -34,6 +36,6 @@ onMounted(async () => {
       <router-link to="/send">Send Post</router-link> | 
       <router-link to="/my_post">My Posts</router-link>
     </template>
-    <router-view></router-view>
+    <router-view @auth="onAuth"></router-view>
   </div>
 </template>
