@@ -20,7 +20,7 @@ pub async fn add_post(
     db_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post_id = db::post::add_post(&user, &post_body, &client).await?;
+    let post_id = db::post::add(&user, &post_body, &client).await?;
     info!("New Post:{}", post_id);
     let result = AddPostResultDTO { id: post_id.to_string() };
     Ok(HttpResponse::Ok().json(result))
@@ -34,7 +34,7 @@ pub async fn delete_post(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let _ = db::post::del_post(&user, &del_body, &client, &redis_addr).await?;
+    let _ = db::post::delete(&user, &del_body, &client, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -46,7 +46,7 @@ pub async fn get_post(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::get_post(&user, &body.id, &client, &redis_addr).await?;
+    let post = db::post::get_one(&user, &body.id, &client, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(post))
 }
 
@@ -56,7 +56,7 @@ pub async fn post_like(
     like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
-    let _ = db::post::like_post(&like_body.id, &user.id, &redis_addr).await?;
+    let _ = db::post::like(&like_body.id, &user.id, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -66,7 +66,7 @@ pub async fn post_cancel_like(
     like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
-    let _ = db::post::unlike_post(&like_body.id, &user.id, &redis_addr).await?;
+    let _ = db::post::cancel_like(&like_body.id, &user.id, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -79,7 +79,7 @@ pub async fn my_post(
 ) -> Result<HttpResponse, Error> {
     const LIMIT: i64 = 20;
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::get_my_posts(&user, &body.page, &LIMIT, &client, &redis_addr).await?;
+    let post = db::post::get_mine(&user, &body.page, &LIMIT, &client, &redis_addr).await?;
     let next = post.len() >= LIMIT as usize;
     Ok(HttpResponse::Ok().json(GetMyPostsResultDTO{
         page: body.page,
@@ -96,7 +96,7 @@ pub async fn comment_post(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post_id = db::post::comment_post(&user, &body, &client, &redis_addr).await?;
+    let post_id = db::post::comment(&user, &body, &client, &redis_addr).await?;
     info!("New Comment:{}", post_id);
     let result = AddPostResultDTO { id: post_id.to_string() };
     Ok(HttpResponse::Ok().json(result))

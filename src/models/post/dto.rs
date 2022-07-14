@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::data_models::Post;
+use crate::data_models::PostExtends;
 
 #[derive(Deserialize, Serialize)]
 pub struct AddPostDTO {
@@ -39,7 +39,7 @@ pub struct GetMyPostsDTO {
 pub struct GetMyPostsResultDTO {
     pub page: i64,
     pub next: bool,
-    pub list: Vec<Post>,
+    pub list: Vec<PostExtends>,
 }
 
 

@@ -7,14 +7,18 @@ import Post from './Post.vue';
 let id = router.currentRoute.value.params.id as string;
 
 let state = reactive({
-  data: null as any,
+  post: null as PostModel | null,
+  comments: [] as PostModel[],
 })
 
 onMounted(async () => {
   let resp = await client.get('post', 'get_post', {
     params: { id },
   })
-  state.data = resp.data;
+  if (resp.data) {
+    state.post = resp.data.post
+    state.comments = resp.data.comments
+  }
 })
 const content = ref('')
 async function onComment() {
@@ -36,10 +40,17 @@ async function onComment() {
 <template>
   <div>
     <div>DETAIL</div>
-    <Post v-if="state.data" :item="state.data"></Post>
-    <br/>
+    <Post v-if="state.post" :item="state.post"></Post>
     <br/>
     <textarea v-model="content" style="width:200px;height:40px;"></textarea>
     <input type="button" @click="onComment" value="Comment" />
+    <br/>
+    <br/>
+    <template v-if="state.comments && state.comments.length">
+      <div v-for="(item) in state.comments">
+        <Post :item="item"></Post>
+        <br/>
+      </div>
+    </template>
   </div>
 </template>

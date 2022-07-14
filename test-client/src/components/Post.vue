@@ -3,15 +3,7 @@ import { reactive } from "@vue/reactivity";
 import client from "../axios/client";
 import router from "../pageRouter";
 const props = defineProps<{
-  item: {
-    id: string
-    create_time: string
-    content: string
-    sender: number
-    like_count: number
-    liked: number
-    comment_count: number
-  } | undefined;
+  item?: PostModel
 }>();
 
 let id = props.item?.id.toString();
@@ -57,15 +49,40 @@ const cancel_like = async () => {
   }
 }
 
+const onOrigin = async (id: string) => {
+  router.push(`/po/${id}`);
+}
+
 </script>
 
 <template>
-  <template v-if="props.item!=null">
-    <div @click="check_details">
-      <div>{{ new Date(item!.create_time).toLocaleString() }}</div>
-      <div>{{ item!.content }}</div>
+  <template v-if="item!=null">
+    <div @click="check_details" class="p-2 border-b">
+      <div class="flex pb-2">
+        <img class="avatar rounded" :src="item!.sender.avatar_url" alt="avatar"/>
+        <div class="flex flex-col ml-2">
+          <div>{{item!.sender.nick}}</div>
+          <div class="text-sm text-gray-500">{{ new Date(item!.create_time).toLocaleString() }}</div>
+        </div>
+      </div>
+      <div class="mb-2 text-xl">{{ item!.content }}</div>
+      <template v-if="item!.origin_id">
+        <div class="cursor-pointer border border-gray-400 rounded-md p-2 mb-2" @click="onOrigin(item!.origin_id!)">
+          <div class="text-sm text-gray-400 mb-1">转自</div>
+          <div class="flex pb-2">
+            <img class="avatar rounded" :src="item!.origin_sender!.avatar_url" alt="avatar"/>
+            <div class="flex flex-col ml-2">
+              <div>{{item!.origin_sender!.nick}}</div>
+              <div class="text-sm text-gray-500">{{ new Date(item!.origin_create_time!).toLocaleString() }}</div>
+            </div>
+          </div>
+          <div>{{item!.origin_content!}}</div>
+        </div>
+      </template>
+      <!-- 点赞 -->
       <input type="button" :value="`${state.liked ? 'liked' : 'like'}:${state.like_count}`" class="action-button"
         :class="state.liked ? 'active' : ''" @click.stop="like" />
+      <!-- 评论 -->
       <input type="button" :value="`comment:${state.comment_count}`" class="action-button" />
     </div>
   </template>
@@ -81,5 +98,10 @@ const cancel_like = async () => {
 .active {
   background: #9c9cff;
   color: white
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
 }
 </style>

@@ -81,21 +81,30 @@ impl RedisCmd {
 }
 
 pub trait RespValueRedisHelper {
-    fn int_to_bool(&self) -> bool;
-    fn to_i64(&self) -> i64;
+    fn integer_to_bool(&self) -> bool;
+    fn integer_to_i64(&self) -> i64;
+    fn bulk_to_i64(&self) -> Option<i64>;
 }
 
 impl RespValueRedisHelper for RespValue {
-    fn int_to_bool(&self) -> bool {
+    fn integer_to_bool(&self) -> bool {
         match self {
             RespValue::Integer(num) => num == &1,
             _ => false,
         }
     }
-    fn to_i64(&self) -> i64 {
+    fn integer_to_i64(&self) -> i64 {
         match self {
             RespValue::Integer(num) => *num,
             _ => 0,
         }
+    }
+    fn bulk_to_i64(&self) -> Option<i64> {
+        if let RespValue::BulkString(bytes) = self {
+            if let Ok(num) = String::from_utf8_lossy(bytes).into_owned().parse::<i64>() {
+                return Some(num);
+            }
+        }
+        None
     }
 }

@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS main.users
     nick character varying(15) NOT NULL UNIQUE,
     -- 密码 （加密后的）
     pwd text,
+    -- 头像
+    avatar_url character varying(256),
     -- 密码盐
     _salt text NOT NULL,
     -- 创建时间
@@ -44,6 +46,8 @@ CREATE TABLE IF NOT EXISTS main.posts
     likes bigint NOT NULL DEFAULT 0,
     -- 评论数量
     comments bigint NOT NULL DEFAULT 0,
+    -- 讨厌数量
+    dislikes bigint NOT NULL DEFAULT 0,
     -- 继承（评论）哪条po文
     extends bigint REFERENCES main.posts(id),
     CONSTRAINT posts_pkey PRIMARY KEY (id)
