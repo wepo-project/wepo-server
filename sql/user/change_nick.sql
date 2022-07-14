@@ -1,0 +1,1 @@
+UPDATE main.users SET nick = $1 WHERE id = $2;

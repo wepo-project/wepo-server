@@ -14,7 +14,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 
 /// 用户注册
-pub async fn register_user(
+pub async fn register(
     user_info: web::Json<RegisterUserDTO>,
     db_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, MyError> {
@@ -32,7 +32,7 @@ pub async fn register_user(
 }
 
 /// 用户登录
-pub async fn user_login(
+pub async fn login(
     user: web::Json<LoginUserDTO>,
     db_pool: web::Data<Pool>,
     // redis: web::Data<Addr<RedisActor>>,
@@ -57,7 +57,7 @@ pub async fn user_login(
 }
 
 /// 用token登录
-pub async fn token_login(
+pub async fn login_with_token(
     data: TokenStr,
 ) -> Result<HttpResponse, MyError> {
     let data = validate_token(&data.token)?;
@@ -66,6 +66,14 @@ pub async fn token_login(
     let new_token = add_token_prefix(create_jwt(&user.id, &user.nick)?);
     Ok(HttpResponse::Ok().json(new_token))
 }
+
+// pub async fn change_nick(
+//     data: web::Json<ChangeNickDTO>,
+// ) -> Result<HttpResponse, MyError> {
+
+// }
+
+// ============================================
 
 const JWT_SECRET: &[u8] = b"wepo_Jwt_Xecret";
 

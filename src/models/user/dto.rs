@@ -28,3 +28,7 @@ pub struct LoginResultDTO {
     pub token: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct ChangeNickDTO {
+    pub nick: String,
+}

@@ -26,16 +26,10 @@ const onAuth = () => {
 </script>
 
 <template>
-  <div>
-    <template v-if="!state.isLogined">
-      <router-link to="/login">Login</router-link> | 
-      <router-link to="/reg">Register</router-link>
-    </template>
-    <template v-else>
-      <router-link to="/">Home</router-link> | 
-      <router-link to="/send">Send Post</router-link> | 
-      <router-link to="/my_post">My Posts</router-link>
-    </template>
-    <router-view @auth="onAuth"></router-view>
+  <div class="flex flex-col h-screen">
+    <router-view @auth="onAuth" class="flex-auto"></router-view>
+    <div v-if="state.isLogined" class="h-14 bg-slate-300">
+      
+    </div>
   </div>
 </template>
