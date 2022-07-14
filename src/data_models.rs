@@ -67,8 +67,11 @@ pub struct PostExtends {
     pub create_time: NaiveDateTime,
     pub like_count: i64,
     pub comment_count: i64,
-    /// 我是否点赞过，从redis上获取
+    pub hate_count: i64,
+    /// 我是否点赞，从redis上获取
     pub liked: bool,
+    /// 是否讨厌，从redis上获取
+    pub hated: bool,
     /// 转发的id
     #[serde(skip_serializing_if = "Option::is_none")]
     pub origin_id: Option<BigInt>,
@@ -92,8 +95,10 @@ impl From<&Row> for PostExtends {
             content: row.get("content"),
             create_time: row.get("create_time"),
             like_count: row.get("likes"),
-            liked: false,
+            hate_count: row.get("hates"),
             comment_count: row.get("comments"),
+            liked: false,
+            hated: false,
             origin_id: row.try_get("origin_id").ok(), 
             origin_content: row.try_get("origin_content").ok(),
             origin_sender: PostSender::optional(&row.try_get("origin_sender_id").ok(), &row.try_get("origin_sender_nick").ok()),
@@ -138,8 +143,11 @@ impl SyncCache for PostExtends {
             .exec_all(vec![
                 RedisCmd::get(&RedisKey::post_like_count(&id)),
                 RedisCmd::get(&RedisKey::post_comments_count(&id)),
+                RedisCmd::get(&RedisKey::post_hate_count(&id)),
                 // 获取我是否点赞
                 RedisCmd::sismember(&RedisKey::post_likes(id), &user.id.to_string()),
+                // 获取我是否反感
+                RedisCmd::sismember(&RedisKey::post_hates(id), &user.id.to_string()),
             ])
             .await?
             .into_iter();
@@ -154,10 +162,21 @@ impl SyncCache for PostExtends {
                 self.comment_count = num;
             }
         }
+        if let Some(val) = ret.next() {
+            if let Some(num) = val.bulk_to_i64() {
+                self.hate_count = num;
+            }
+        }
         if let Some(RespValue::Integer(num)) = ret.next() {
             if num == 1 {
                 // 已经点赞
                 self.liked = true;
+            }
+        }
+        if let Some(RespValue::Integer(num)) = ret.next() {
+            if num == 1 {
+                // 已经反感
+                self.hated = true;
             }
         }
         Ok(())

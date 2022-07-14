@@ -3,6 +3,7 @@ SELECT
     r1.content, 
     r1.create_time, 
     r1.likes, 
+    r1.hates,
     r1.comments, 
     r1.sender_nick, 
     r1.sender_id,
@@ -12,7 +13,16 @@ SELECT
     u1.nick AS origin_sender_nick,
     u1.id AS origin_sender_id
 FROM (
-    SELECT p.id, p.content, p.create_time, p.likes, p.comments, p.extends, u.nick AS sender_nick, u.id AS sender_id
+    SELECT 
+        p.id,
+        p.content, 
+        p.create_time, 
+        p.likes, 
+        p.comments, 
+        p.hates,
+        p.extends, 
+        u.nick AS sender_nick, 
+        u.id AS sender_id
     FROM main.posts AS p, main.users AS u 
     WHERE p.id = $1 AND p.sender = u.id
 ) AS r1

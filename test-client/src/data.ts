@@ -1,10 +1,12 @@
 interface PostModel {
-    comment_count: number
     content: string
     create_time: string
     id: string
     like_count: number
+    hate_count: number
+    comment_count: number
     liked: boolean
+    hated: boolean
     sender: PostSender
     origin_content?: string
     origin_id?: string

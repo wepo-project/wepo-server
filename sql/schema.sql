@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS main.posts
     -- 评论数量
     comments bigint NOT NULL DEFAULT 0,
     -- 讨厌数量
-    dislikes bigint NOT NULL DEFAULT 0,
+    hates bigint NOT NULL DEFAULT 0,
     -- 继承（评论）哪条po文
     extends bigint REFERENCES main.posts(id),
     CONSTRAINT posts_pkey PRIMARY KEY (id)

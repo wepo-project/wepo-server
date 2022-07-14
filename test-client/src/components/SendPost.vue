@@ -19,8 +19,8 @@ async function onSend() {
 </script>
 
 <template>
-  <div>
-    <textarea v-model="content" style="width:200px;height:100px;"></textarea>
-    <input type="button" @click="onSend" value="Send" />
+  <div class="py-2 px-3">
+    <textarea v-model="content" class="w-full h-20 p-2 border rounded-sm"></textarea>
+      <div class="btn btn-blue w-fit mt-2" @click="onSend">Send</div>
   </div>
 </template>

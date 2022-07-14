@@ -2,6 +2,11 @@
 import { reactive } from "@vue/reactivity";
 import client from "../axios/client";
 import router from "../pageRouter";
+import Svg from "../svg/svg.vue";
+import Heart from "../svg/heart.vue";
+import Comment from "../svg/comment.vue";
+import Hate from "../svg/Hate.vue";
+
 const props = defineProps<{
   item?: PostModel
 }>();
@@ -10,48 +15,50 @@ let id = props.item?.id.toString();
 
 const state = reactive({
   like_count: props.item?.like_count ?? 0,
-  liked: props.item?.liked ?? false, // 已经点赞
+  liked: props.item?.liked ?? false,
+  hate_count: props.item?.hate_count ?? 0,
+  hated: props.item?.hated ?? false,
   comment_count: props.item?.comment_count ?? 0,
 })
-
-const like = async () => {
-  if (state.liked) {
-    return cancel_like()
-  }
-  const resp = await client.get("post", "like", {
-    params: { id },
-  });
-  if (resp.data.succ) {
-    state.liked = true
-    state.like_count += 1
-  }
-  // 之前点过赞了
-  else if (resp.data.code == 201) {
-    state.liked = true
-  }
-};
 
 const check_details = async () => {
   router.push(`/po/${id}`);
 }
 
-const cancel_like = async () => {
-  const resp = await client.get("post", "cancel_like", {
+const like = async () => {
+  let is_cancel = state.liked;
+  const resp = await client.get("post", is_cancel ? "cancel_like" : "like", {
     params: { id },
   });
-  if (resp.data.succ || resp.data.code == 201) {
-    state.liked = false
-    state.like_count -= 1
+  if (resp.data.succ) {
+    state.liked = !is_cancel;
+    state.like_count += is_cancel ? -1 : 1;
   }
-  // 没有点过赞
+  // 之前点过赞了
   else if (resp.data.code == 201) {
-    state.liked = false
+    state.liked = !is_cancel
   }
-}
+};
 
 const onOrigin = async (id: string) => {
+  console.log(`go to ${id}`)
   router.push(`/po/${id}`);
 }
+
+const hate = async () => {
+  let is_cancel = state.hated;
+  const resp = await client.get("post", is_cancel ? "cancel_hate" : "hate", {
+    params: { id },
+  });
+  if (resp.data.succ) {
+    state.hated = !is_cancel;
+    state.hate_count += is_cancel ? -1 : 1;
+  }
+  // 之前点过赞了
+  else if (resp.data.code == 201) {
+    state.hated = !is_cancel
+  }
+};
 
 </script>
 
@@ -68,7 +75,7 @@ const onOrigin = async (id: string) => {
       <div class="mb-2 text-xl">{{ item!.content }}</div>
       <template v-if="item!.origin_id">
         <div class="cursor-pointer border border-gray-400 rounded-md p-2 mb-2" @click="onOrigin(item!.origin_id!)">
-          <div class="text-sm text-gray-400 mb-1">转自</div>
+          <div class="text-sm text-gray-400 mb-1">Origin</div>
           <div class="flex pb-2">
             <img class="avatar rounded" :src="item!.origin_sender!.avatar_url" alt="avatar"/>
             <div class="flex flex-col ml-2">
@@ -79,11 +86,14 @@ const onOrigin = async (id: string) => {
           <div>{{item!.origin_content!}}</div>
         </div>
       </template>
-      <!-- 点赞 -->
-      <input type="button" :value="`${state.liked ? 'liked' : 'like'}:${state.like_count}`" class="action-button"
-        :class="state.liked ? 'active' : ''" @click.stop="like" />
-      <!-- 评论 -->
-      <input type="button" :value="`comment:${state.comment_count}`" class="action-button" />
+      <div class="flex">
+        <Heart v-bind:liked="state.liked" @click="like"/>
+        <div class="ml-1 mr-2">{{state.like_count}}</div>
+        <Comment/>
+        <div class="ml-1 mr-2">{{state.comment_count}}</div>
+        <Hate v-bind:hated="state.hated" @click="hate"/>
+        <div class="ml-1 mr-2">{{state.hate_count}}</div>
+      </div>
     </div>
   </template>
 </template>

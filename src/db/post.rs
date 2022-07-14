@@ -237,3 +237,59 @@ pub async fn comment(
         .pop()
         .ok_or(MyError::NotFound)
 }
+
+
+/// 反感
+pub async fn hate(
+    post_id: &i64,
+    user_id: &i32,
+    redis_addr: &Addr<RedisActor>,
+) -> Result<(), MyError> {
+    let hate_key = RedisKey::post_hates(post_id);
+    // 判断是否重复不喜欢
+    let hated = redis_addr
+        .exec(RedisCmd::sismember(&hate_key, &user_id.to_string()))
+        .await?;
+    if hated.integer_to_bool() {
+        // 已经不喜欢
+        return Err(MyError::code(201));
+    }
+
+    redis_addr
+        .exec_all(vec![
+            // 添加进不喜欢集合
+            RedisCmd::sadd(&hate_key, &user_id.to_string()),
+            // 增加讨厌数
+            RedisCmd::incr(&RedisKey::post_hate_count(post_id)),
+        ])
+        .await?;
+    Ok(())
+}
+
+/// 取消反感
+pub async fn cancel_hate(
+    post_id: &i64,
+    user_id: &i32,
+    redis_addr: &Addr<RedisActor>,
+) -> Result<(), MyError> {
+    let hate_key = RedisKey::post_hates(post_id);
+
+    let hated = redis_addr
+        .exec(RedisCmd::sismember(&hate_key, &user_id.to_string()))
+        .await?;
+
+    if !hated.integer_to_bool() {
+        // 没有反感，返回
+        return Err(MyError::code(201));
+    }
+
+    redis_addr
+        .exec_all(vec![
+            // 移除出反感集合
+            RedisCmd::srem(&hate_key, &user_id.to_string()),
+            // 减少反感数
+            RedisCmd::decr(&RedisKey::post_hate_count(post_id)),
+        ])
+        .await?;
+    Ok(())
+}

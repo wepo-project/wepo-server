@@ -30,10 +30,12 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div>MY POST</div>
     <div v-for="(item) in state.list" :key="item.id">
       <Post :item="item"></Post>
       <br />
+    </div>
+    <div v-if="!state.list || !state.list.length">
+      You Haven't Send Any Post.
     </div>
   </div>
 </template>

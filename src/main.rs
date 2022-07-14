@@ -66,13 +66,15 @@ async fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::scope("/post")
-                            .route("/add_post", post().to(PostHandler::add_post))
-                            .route("/del_post", delete().to(PostHandler::delete_post))
-                            .route("/like", get().to(PostHandler::post_like))
-                            .route("/cancel_like", get().to(PostHandler::post_cancel_like))
-                            .route("/get_post", get().to(PostHandler::get_post))
-                            .route("/my_post", post().to(PostHandler::my_post))
-                            .route("/comment", post().to(PostHandler::comment_post))
+                            .route("/add_post", post().to(PostHandler::add))
+                            .route("/del_post", delete().to(PostHandler::delete))
+                            .route("/like", get().to(PostHandler::like))
+                            .route("/cancel_like", get().to(PostHandler::cancel_like))
+                            .route("/hate", get().to(PostHandler::hate))
+                            .route("/cancel_hate", get().to(PostHandler::cancel_hate))
+                            .route("/get_post", get().to(PostHandler::get_one))
+                            .route("/my_post", post().to(PostHandler::mine))
+                            .route("/comment", post().to(PostHandler::comment))
                             .wrap(auth),
                     ),
             )

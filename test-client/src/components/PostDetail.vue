@@ -5,6 +5,7 @@ import router from '../pageRouter';
 import Post from './Post.vue';
 
 let id = router.currentRoute.value.params.id as string;
+console.log(`id:${id}`)
 
 let state = reactive({
   post: null as PostModel | null,
@@ -42,8 +43,10 @@ async function onComment() {
     <div>DETAIL</div>
     <Post v-if="state.post" :item="state.post"></Post>
     <br/>
-    <textarea v-model="content" style="width:200px;height:40px;"></textarea>
-    <input type="button" @click="onComment" value="Comment" />
+    <div class="flex flex-col px-2">
+      <textarea v-model="content" class="w-full h-20 p-2 border rounded-sm"></textarea>
+      <div class="btn btn-blue w-fit mt-2" @click="onComment">Comment</div>
+    </div>
     <br/>
     <br/>
     <template v-if="state.comments && state.comments.length">

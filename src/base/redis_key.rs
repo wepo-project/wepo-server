@@ -29,5 +29,9 @@ impl RedisKey {
         (post_comments, post_id),
         /// 评论数量
         (post_comments_count, post_id),
+        /// 反感集合
+        (post_hates, post_id),
+        /// 反感集合
+        (post_hate_count, post_id),
     }
 }

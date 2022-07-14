@@ -14,7 +14,7 @@ use crate::{
 
 use super::dto::DelPostDTO;
 
-pub async fn add_post(
+pub async fn add(
     user: UserInfo,
     post_body: web::Json<AddPostDTO>,
     db_pool: web::Data<Pool>,
@@ -27,7 +27,7 @@ pub async fn add_post(
 }
 
 /// 删除po
-pub async fn delete_post(
+pub async fn delete(
     user: UserInfo,
     del_body: web::Json<DelPostDTO>,
     db_pool: web::Data<Pool>,
@@ -39,7 +39,7 @@ pub async fn delete_post(
 }
 
 /// 获取po
-pub async fn get_post(
+pub async fn get_one(
     user: UserInfo,
     body: web::Query<GetPostDTO>,
     db_pool: web::Data<Pool>,
@@ -51,7 +51,7 @@ pub async fn get_post(
 }
 
 /// 点赞
-pub async fn post_like(
+pub async fn like(
     user: UserInfo,
     like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
@@ -61,7 +61,7 @@ pub async fn post_like(
 }
 
 /// 取消点赞
-pub async fn post_cancel_like(
+pub async fn cancel_like(
     user: UserInfo,
     like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
@@ -71,12 +71,13 @@ pub async fn post_cancel_like(
 }
 
 /// 获取我的posts
-pub async fn my_post(
+pub async fn mine(
     user: UserInfo,
     body: web::Json<GetMyPostsDTO>,
     db_pool: web::Data<Pool>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
+    /// 每页的数量
     const LIMIT: i64 = 20;
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let post = db::post::get_mine(&user, &body.page, &LIMIT, &client, &redis_addr).await?;
@@ -89,7 +90,7 @@ pub async fn my_post(
 }
 
 /// 评论
-pub async fn comment_post(
+pub async fn comment(
     user: UserInfo,
     body: web::Json<CommentPostDTO>,
     db_pool: web::Data<Pool>,
@@ -100,4 +101,25 @@ pub async fn comment_post(
     info!("New Comment:{}", post_id);
     let result = AddPostResultDTO { id: post_id.to_string() };
     Ok(HttpResponse::Ok().json(result))
+}
+
+
+/// 反感
+pub async fn hate(
+    user: UserInfo,
+    like_body: web::Query<LikePostDTO>,
+    redis_addr: web::Data<Addr<RedisActor>>,
+) -> Result<HttpResponse, Error> {
+    let _ = db::post::hate(&like_body.id, &user.id, &redis_addr).await?;
+    Ok(HttpResponse::Ok().json(ResultResponse::succ()))
+}
+
+/// 取消反感
+pub async fn cancel_hate(
+    user: UserInfo,
+    like_body: web::Query<LikePostDTO>,
+    redis_addr: web::Data<Addr<RedisActor>>,
+) -> Result<HttpResponse, Error> {
+    let _ = db::post::cancel_hate(&like_body.id, &user.id, &redis_addr).await?;
+    Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
