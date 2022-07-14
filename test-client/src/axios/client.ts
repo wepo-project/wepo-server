@@ -1,5 +1,6 @@
 import axios, { Method, AxiosPromise, AxiosRequestConfig } from "axios";
 import JsonBigInt from "json-bigint"
+import router from "../pageRouter";
 
 interface NetClient {
   send(method: Method, model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
@@ -38,6 +39,7 @@ axiosInstance.interceptors.response.use((resp) => {
   // console.log(err);
   if (err.response && err.response.status == 401) {
     console.log("登录失效")
+    // router.push('/login');
   }
   return Promise.reject(err)
 })

@@ -3,6 +3,7 @@ import { RouterLink } from 'vue-router';
 import { onMounted, reactive } from 'vue';
 import client from './axios/client';
 import router from './pageRouter';
+import Tabbar from './components/Tabbar.vue';
 
 const state = reactive({
   isLogined: false,
@@ -28,8 +29,6 @@ const onAuth = () => {
 <template>
   <div class="flex flex-col h-screen">
     <router-view @auth="onAuth" class="flex-auto"></router-view>
-    <div v-if="state.isLogined" class="h-14 bg-slate-300">
-      
-    </div>
+    <tabbar v-if="state.isLogined"></tabbar>
   </div>
 </template>

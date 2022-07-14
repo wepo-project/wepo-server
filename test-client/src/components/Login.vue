@@ -30,7 +30,7 @@ async function onLogin() {
     </div>
     <div class="flex w-full">
       <div class="flex-auto btn btn-blue mr-1 text-center" @click="onLogin">Login</div>
-      <router-link class="flex-shrink btn ml-1 text-center border" to="/reg">Register</router-link>
+      <router-link class="flex-shrink btn btn-main ml-1 text-center border" to="/reg">Register</router-link>
     </div>
   </div>
 </template>

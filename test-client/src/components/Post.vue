@@ -2,7 +2,6 @@
 import { reactive } from "@vue/reactivity";
 import client from "../axios/client";
 import router from "../pageRouter";
-import Svg from "../svg/svg.vue";
 import Heart from "../svg/heart.vue";
 import Comment from "../svg/comment.vue";
 import Hate from "../svg/Hate.vue";
@@ -42,7 +41,8 @@ const like = async () => {
 
 const onOrigin = async (id: string) => {
   console.log(`go to ${id}`)
-  router.push(`/po/${id}`);
+  // router.replace(`/po/${id}`);
+  window.location.href = `#/po/${id}`
 }
 
 const hate = async () => {
@@ -68,31 +68,31 @@ const hate = async () => {
       <div class="flex pb-2">
         <img class="avatar rounded" :src="item!.sender.avatar_url" alt="avatar"/>
         <div class="flex flex-col ml-2">
-          <div>{{item!.sender.nick}}</div>
+          <div class="dark-white">{{item!.sender.nick}}</div>
           <div class="text-sm text-gray-500">{{ new Date(item!.create_time).toLocaleString() }}</div>
         </div>
       </div>
-      <div class="mb-2 text-xl">{{ item!.content }}</div>
+      <div class="mb-2 text-xl dark-white">{{ item!.content }}</div>
       <template v-if="item!.origin_id">
         <div class="cursor-pointer border border-gray-400 rounded-md p-2 mb-2" @click="onOrigin(item!.origin_id!)">
           <div class="text-sm text-gray-400 mb-1">Origin</div>
           <div class="flex pb-2">
             <img class="avatar rounded" :src="item!.origin_sender!.avatar_url" alt="avatar"/>
             <div class="flex flex-col ml-2">
-              <div>{{item!.origin_sender!.nick}}</div>
+              <div class="dark-white">{{item!.origin_sender!.nick}}</div>
               <div class="text-sm text-gray-500">{{ new Date(item!.origin_create_time!).toLocaleString() }}</div>
             </div>
           </div>
-          <div>{{item!.origin_content!}}</div>
+          <div class="dark-white text-sm">{{item!.origin_content!}}</div>
         </div>
       </template>
-      <div class="flex">
+      <div class="flex" @click.stop="void">
         <Heart v-bind:liked="state.liked" @click="like"/>
-        <div class="ml-1 mr-2">{{state.like_count}}</div>
+        <div class="ml-1 mr-2 dark-white select-none">{{state.like_count}}</div>
         <Comment/>
-        <div class="ml-1 mr-2">{{state.comment_count}}</div>
+        <div class="ml-1 mr-2 dark-white select-none">{{state.comment_count}}</div>
         <Hate v-bind:hated="state.hated" @click="hate"/>
-        <div class="ml-1 mr-2">{{state.hate_count}}</div>
+        <div class="ml-1 mr-2 dark-white select-none">{{state.hate_count}}</div>
       </div>
     </div>
   </template>

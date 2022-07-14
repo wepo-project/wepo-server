@@ -21,7 +21,9 @@ onMounted(async () => {
     state.comments = resp.data.comments
   }
 })
+
 const content = ref('')
+
 async function onComment() {
   if (content.value != '') {
     const resp = await client.post('post', 'comment', {
@@ -44,7 +46,7 @@ async function onComment() {
     <Post v-if="state.post" :item="state.post"></Post>
     <br/>
     <div class="flex flex-col px-2">
-      <textarea v-model="content" class="w-full h-20 p-2 border rounded-sm"></textarea>
+      <textarea v-model="content" class="input w-full h-20 p-2 "></textarea>
       <div class="btn btn-blue w-fit mt-2" @click="onComment">Comment</div>
     </div>
     <br/>
