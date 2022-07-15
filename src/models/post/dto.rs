@@ -30,13 +30,13 @@ pub struct GetPostDTO {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct GetMyPostsDTO {
+pub struct GetPageDTO {
     pub page: i64,
 }
 
 
 #[derive(Deserialize, Serialize)]
-pub struct GetMyPostsResultDTO {
+pub struct GetPostsResultDTO {
     pub page: i64,
     pub next: bool,
     pub list: Vec<PostExtends>,

@@ -8,9 +8,12 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   item?: PostModel
-}>();
+  showDelete?: boolean
+}>(), {
+  showDelete: false,
+});
 
 let id = props.item?.id.toString();
 
@@ -107,7 +110,7 @@ const deletePost = async () => {
         <div class="ml-1 mr-2 dark-white select-none">{{state.comment_count}}</div>
         <Hate v-bind:hated="state.hated" @click="hate"/>
         <div class="ml-1 mr-2 dark-white select-none">{{state.hate_count}}</div>
-        <div class="ml-auto hover:underline" @click.stop="deletePost">Delete</div>
+        <div v-if="showDelete" class="ml-auto hover:underline" @click.stop="deletePost">Delete</div>
       </div>
     </div>
   </template>

@@ -141,21 +141,31 @@ impl SyncCache for PostExtends {
     /// 返回 false 则表明没有
     async fn sync_cache_data(
         &mut self,
-        user: &UserInfo,
+        user: Option<&UserInfo>,
         redis_addr: &Addr<RedisActor>,
     ) -> Result<(), MyError> {
         // 拉取redis里缓存的数量
         let id = self.id.inner();
+        let user_id = user.map(|v| &v.id);
+        let have_user = user_id.is_some();
         let mut ret = redis_addr
-            .exec_all(vec![
-                RedisCmd::get(&RedisKey::post_like_count(&id)),
-                RedisCmd::get(&RedisKey::post_comments_count(&id)),
-                RedisCmd::get(&RedisKey::post_hate_count(&id)),
-                // 获取我是否点赞
-                RedisCmd::sismember(&RedisKey::post_likes(id), &user.id.to_string()),
-                // 获取我是否反感
-                RedisCmd::sismember(&RedisKey::post_hates(id), &user.id.to_string()),
-            ])
+            .exec_all({
+                let mut vec = vec![
+                    RedisCmd::get(&RedisKey::post_like_count(&id)),
+                    RedisCmd::get(&RedisKey::post_comments_count(&id)),
+                    RedisCmd::get(&RedisKey::post_hate_count(&id)),
+                ];
+                if have_user {
+                    let user_id = user_id.unwrap().to_string();
+                    vec.append(&mut vec![
+                        // 获取我是否点赞
+                        RedisCmd::sismember(&RedisKey::post_likes(id), &user_id),
+                        // 获取我是否反感
+                        RedisCmd::sismember(&RedisKey::post_hates(id), &user_id),
+                    ]);
+                }
+                vec
+            })
             .await?
             .into_iter();
 
@@ -174,16 +184,18 @@ impl SyncCache for PostExtends {
                 self.hate_count = num;
             }
         }
-        if let Some(RespValue::Integer(num)) = ret.next() {
-            if num == 1 {
-                // 已经点赞
-                self.liked = true;
+        if have_user {
+            if let Some(RespValue::Integer(num)) = ret.next() {
+                if num == 1 {
+                    // 已经点赞
+                    self.liked = true;
+                }
             }
-        }
-        if let Some(RespValue::Integer(num)) = ret.next() {
-            if num == 1 {
-                // 已经反感
-                self.hated = true;
+            if let Some(RespValue::Integer(num)) = ret.next() {
+                if num == 1 {
+                    // 已经反感
+                    self.hated = true;
+                }
             }
         }
         Ok(())

@@ -33,11 +33,7 @@ fn get_next_id() -> Result<i64, MyError> {
 }
 
 /// 添加
-pub async fn add(
-    user: &UserInfo,
-    post_data: &AddPostDTO,
-    client: &Client,
-) -> Result<i64, MyError> {
+pub async fn add(user: &UserInfo, post_data: &AddPostDTO, client: &Client) -> Result<i64, MyError> {
     let _stmt = include_str!("../../sql/post/add.sql");
     // let _stmt = _stmt.replace("$table_fields", &Post::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
@@ -53,6 +49,7 @@ pub async fn add(
 }
 
 /// 删除推文
+/// 201 -> 没有权限删除
 pub async fn delete(
     user: &UserInfo,
     del_data: &DelPostDTO,
@@ -62,26 +59,30 @@ pub async fn delete(
     let _stmt = include_str!("../../sql/post/delete.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
 
-    client
+    let vec = client
         .query(&stmt, &[&del_data.id, &user.id])
         .await
-        .map(|vec| {
-            // 删除post的redis缓存数据
-            let id = &del_data.id;
-            redis_addr.del(&RedisKey::post_likes(id)); // 删除赞集合
-            redis_addr.del(&RedisKey::post_like_count(id)); // 删除赞数量
-            // redis_addr.del(&RedisKey::post_comments(id)); // 删除评论
-            redis_addr.del(&RedisKey::post_hates(id)); // 删除讨厌
-            redis_addr.del(&RedisKey::post_hate_count(id)); // 删除讨厌数量
-            if let Some(row) = vec.first() {
-                let extends_id: Option<i64> = row.get("extends");
-                if let Some(extends_id) = extends_id {
-                    // redis_addr.do_send(RedisCmd::srem(&RedisKey::post_comments(extends_id), &id.to_string()));
-                    redis_addr.do_send(RedisCmd::decr(&RedisKey::post_comments_count(extends_id)));
-                }
+        .map_err(MyError::PGError)?;
+
+    // 返回条数 大于0 删除成功
+    if vec.len() > 0 {
+        // 删除post的redis缓存数据
+        let id = &del_data.id;
+        redis_addr.del(&RedisKey::post_likes(id)); // 删除赞集合
+        redis_addr.del(&RedisKey::post_like_count(id)); // 删除赞数量
+        redis_addr.del(&RedisKey::post_hates(id)); // 删除讨厌
+        redis_addr.del(&RedisKey::post_hate_count(id)); // 删除讨厌数量
+        // 修改原po的评论数量
+        if let Some(row) = vec.first() {
+            let extends_id: Option<i64> = row.get("extends");
+            if let Some(extends_id) = extends_id {
+                redis_addr.do_send(RedisCmd::decr(&RedisKey::post_comments_count(extends_id)));
             }
-        })
-        .map_err(MyError::PGError)
+        }
+        Ok(())
+    } else {
+        Err(MyError::code(201))
+    }
 }
 
 /// 获取某个推文
@@ -105,7 +106,7 @@ pub async fn get_one(
     info!("post_ext: {:?}", post_ext);
 
     // 同步
-    let _ = post_ext.sync_cache_data(user, redis_addr).await;
+    let _ = post_ext.sync_cache_data(Some(user), redis_addr).await;
 
     // 获取评论
     let _stmt = include_str!("../../sql/post/get_comments.sql");
@@ -125,8 +126,11 @@ pub async fn get_one(
     info!("async comments:{}", comments.len());
     // 同步每一条评论的点赞和评论数量
     let _result = try_join_all(
-        comments.iter_mut().map(|comment| comment.sync_cache_data(user, redis_addr))
-    ).await;
+        comments
+            .iter_mut()
+            .map(|comment| comment.sync_cache_data(Some(user), redis_addr)),
+    )
+    .await;
 
     let mut data = PostExtendsWithComment::from_post_ext(post_ext);
     // 添加进之前的数组
@@ -200,16 +204,13 @@ pub async fn get_mine(
 ) -> Result<Vec<PostExtends>, MyError> {
     let _stmt = include_str!("../../sql/post/get_list.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
-    let offset = limit * page;
-    let vec = client
-        .query(&stmt, &[&user.id, &limit, &offset])
-        .await
-        .unwrap();
+    let offset = limit * (page - 1);
+    let vec = client.query(&stmt, &[&user.id, &limit, &offset]).await?;
 
     Ok(join_all(vec.iter().map(|row| async move {
         // move 把row引用带出闭包
         let mut post = PostExtends::from(row);
-        let _ = post.sync_cache_data(user, redis_addr).await;
+        let _ = post.sync_cache_data(Some(user), redis_addr).await;
         post
     }))
     .await)
@@ -246,7 +247,6 @@ pub async fn comment(
         .pop()
         .ok_or(MyError::NotFound)
 }
-
 
 /// 反感
 pub async fn hate(
@@ -301,4 +301,25 @@ pub async fn cancel_hate(
         ])
         .await?;
     Ok(())
+}
+
+/// 浏览
+pub async fn browse(
+    user: &UserInfo,
+    client: &Client,
+    page: &i64,
+    limit: &i64,
+    redis_addr: &Addr<RedisActor>,
+) -> Result<Vec<PostExtends>, MyError> {
+    let _stmt = include_str!("../../sql/post/browse.sql");
+    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let _offset = limit * (page - 1);
+    let vec = client.query(&stmt, &[limit, &_offset]).await?;
+
+    Ok(join_all(vec.iter().map(|row| async move {
+        let mut post = PostExtends::from(row);
+        let _ = post.sync_cache_data(Some(user), redis_addr).await;
+        post
+    }))
+    .await)
 }

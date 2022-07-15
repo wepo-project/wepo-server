@@ -138,7 +138,7 @@ client.loginWithAccount = async (
 client.loginWithToken = async (): Promise<boolean> => {
   const token = getSavedToken();
   if (token) {
-    return wrapLoginCall(() => client.get('token', 'login', {
+    return wrapLoginCall(() => client.get('user', 'token_login', {
       headers: {
         [Authorization]: token
       }

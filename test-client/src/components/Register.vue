@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import client from '../axios/client'
+import router from '../pageRouter';
 
 const nick = ref('')
 const pwd = ref('')
@@ -14,7 +15,7 @@ async function onRegister() {
   });
   if (resp.data.id) {
     alert("注册成功")
-    window.location.href = "#/login"
+    router.push('/login')
   }
 }
 </script>

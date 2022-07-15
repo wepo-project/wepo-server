@@ -73,7 +73,7 @@ pub async fn cancel_like(
 /// 获取我的posts
 pub async fn mine(
     user: UserInfo,
-    body: web::Json<GetMyPostsDTO>,
+    body: web::Json<GetPageDTO>,
     db_pool: web::Data<Pool>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
@@ -82,7 +82,7 @@ pub async fn mine(
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let post = db::post::get_mine(&user, &body.page, &COUNT_PER_PAGE, &client, &redis_addr).await?;
     let next = post.len() >= COUNT_PER_PAGE as usize;
-    Ok(HttpResponse::Ok().json(GetMyPostsResultDTO{
+    Ok(HttpResponse::Ok().json(GetPostsResultDTO{
         page: body.page,
         next,
         list: post,
@@ -122,4 +122,23 @@ pub async fn cancel_hate(
 ) -> Result<HttpResponse, Error> {
     let _ = db::post::cancel_hate(&like_body.id, &user.id, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
+}
+
+/// 浏览posts
+pub async fn browse(
+    user: UserInfo,
+    body: web::Query<GetPageDTO>,
+    db_pool: web::Data<Pool>,
+    redis_addr: web::Data<Addr<RedisActor>>,
+) -> Result<HttpResponse, Error> {
+    /// 每页的数量
+    const COUNT_PER_PAGE: i64 = 20;
+    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
+    let post = db::post::browse(&user, &client, &body.page, &COUNT_PER_PAGE, &redis_addr).await?;
+    let next = post.len() >= COUNT_PER_PAGE as usize;
+    Ok(HttpResponse::Ok().json(GetPostsResultDTO{
+        page: body.page,
+        next,
+        list: post,
+    }))
 }

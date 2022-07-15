@@ -6,7 +6,7 @@ import Post from "./Post.vue";
 
 const state = reactive({
   list: <any>[],
-  page: -1,
+  page: 0,
   next: true,
 });
 
@@ -31,7 +31,7 @@ onMounted(async () => {
 <template>
   <div>
     <div v-for="(item) in state.list" :key="item.id">
-      <Post :item="item"></Post>
+      <Post :item="item" :show-delete="true"></Post>
       <br />
     </div>
     <div v-if="!state.list || !state.list.length">

@@ -53,27 +53,25 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/v1")
                     .service(
-                        web::scope("/token")
-                            .route("/login", get().to(UserHandler::login_with_token)),
-                    )
-                    .service(
                         web::scope("/user")
-                            .route("/register", post().to(UserHandler::register))
-                            .route("/login", post().to(UserHandler::login))
-                            .route("/change_nick", post().to(UserHandler::change_nick))
-                            .route("/search_user", post().to(UserHandler::search_user)),
+                            .route("/register", post().to(UserHandler::register)) // 注册
+                            .route("/login", post().to(UserHandler::login)) // 账号密码登录
+                            .route("/token_login", get().to(UserHandler::login_with_token)) // token 登录
+                            .route("/change_nick", post().to(UserHandler::change_nick)) // 修改昵称
+                            .route("/search_user", post().to(UserHandler::search_user)) // 查找用户
                     )
                     .service(
                         web::scope("/post")
-                            .route("/send", post().to(PostHandler::add))
-                            .route("/delete", delete().to(PostHandler::delete))
-                            .route("/like", get().to(PostHandler::like))
-                            .route("/cancel_like", get().to(PostHandler::cancel_like))
-                            .route("/hate", get().to(PostHandler::hate))
-                            .route("/cancel_hate", get().to(PostHandler::cancel_hate))
-                            .route("/get_post", get().to(PostHandler::get_one))
-                            .route("/my_post", post().to(PostHandler::mine))
-                            .route("/comment", post().to(PostHandler::comment))
+                            .route("/send", post().to(PostHandler::add)) // 发送
+                            .route("/delete", delete().to(PostHandler::delete)) // 删除
+                            .route("/like", get().to(PostHandler::like)) // 喜欢
+                            .route("/cancel_like", get().to(PostHandler::cancel_like)) // 取消喜欢
+                            .route("/hate", get().to(PostHandler::hate)) // 反感
+                            .route("/cancel_hate", get().to(PostHandler::cancel_hate)) // 取消反感
+                            .route("/get_post", get().to(PostHandler::get_one)) // 获取某个
+                            .route("/my_post", post().to(PostHandler::mine)) // 获取我的（翻页）
+                            .route("/comment", post().to(PostHandler::comment)) // 评论
+                            .route("/browse", get().to(PostHandler::browse)) // 浏览所有（翻页）
                     ),
             )
     })

@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router';
 import { ref } from 'vue'
 import client from '../axios/client';
+import router from '../pageRouter';
 
 const nick = ref('')
 const pwd = ref('')
@@ -12,7 +13,7 @@ async function onLogin() {
   let succ = await client.loginWithAccount(nick.value, pwd.value);
   if (succ) {
     emit("auth");
-    window.location.href = "#/";
+    router.push('/')
   }
 }
 </script>
