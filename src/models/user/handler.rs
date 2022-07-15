@@ -73,4 +73,19 @@ pub async fn change_nick(
     Ok(HttpResponse::Ok().json(data))
 }
 
-// ============================================
+/// 搜索用户
+pub async fn search_user(
+    data: web::Json<SearchUserDTO>,
+    db_pool: web::Data<Pool>,
+) -> Result<HttpResponse, MyError> {
+    /// 每页的数量
+    const COUNT_PER_PAGE: i64 = 20;
+    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
+    let list = db::user::search_user(&client, &data.nick, &data.page, &COUNT_PER_PAGE).await?;
+    let next = list.len() >= COUNT_PER_PAGE as usize;
+    Ok(HttpResponse::Ok().json(SearchUserResultDTO {
+        page: data.page,
+        next,
+        list,
+    }))
+}

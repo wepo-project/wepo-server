@@ -78,10 +78,10 @@ pub async fn mine(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     /// 每页的数量
-    const LIMIT: i64 = 20;
+    const COUNT_PER_PAGE: i64 = 20;
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::get_mine(&user, &body.page, &LIMIT, &client, &redis_addr).await?;
-    let next = post.len() >= LIMIT as usize;
+    let post = db::post::get_mine(&user, &body.page, &COUNT_PER_PAGE, &client, &redis_addr).await?;
+    let next = post.len() >= COUNT_PER_PAGE as usize;
     Ok(HttpResponse::Ok().json(GetMyPostsResultDTO{
         page: body.page,
         next,

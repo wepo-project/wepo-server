@@ -3,7 +3,6 @@ use crate::{
     errors::MyError,
 };
 
-use actix_web::{dev::ServiceRequest, Error, HttpMessage};
 use chrono::Utc;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use log::info;

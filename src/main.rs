@@ -10,7 +10,6 @@ mod traits;
 use crate::config::WepoConfig;
 use crate::{
     models::user::handler as UserHandler,
-    models::user::auth as AuthHandler,
     models::post::handler as PostHandler,
 };
 use ::config::Config;
@@ -61,12 +60,13 @@ async fn main() -> std::io::Result<()> {
                         web::scope("/user")
                             .route("/register", post().to(UserHandler::register))
                             .route("/login", post().to(UserHandler::login))
-                            .route("/change_nick", post().to(UserHandler::change_nick)),
+                            .route("/change_nick", post().to(UserHandler::change_nick))
+                            .route("/search_user", post().to(UserHandler::search_user)),
                     )
                     .service(
                         web::scope("/post")
-                            .route("/add_post", post().to(PostHandler::add))
-                            .route("/del_post", delete().to(PostHandler::delete))
+                            .route("/send", post().to(PostHandler::add))
+                            .route("/delete", delete().to(PostHandler::delete))
                             .route("/like", get().to(PostHandler::like))
                             .route("/cancel_like", get().to(PostHandler::cancel_like))
                             .route("/hate", get().to(PostHandler::hate))

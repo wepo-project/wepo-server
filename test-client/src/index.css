@@ -10,6 +10,10 @@
     @apply bg-blue-500 text-white dark:bg-blue-900;
 }
 
+.btn-green {
+    @apply bg-green-500 text-white dark:bg-blue-900;
+}
+
 .btn-main {
     @apply bg-white text-black dark:bg-stone-500 dark:text-cyan-300;
 }

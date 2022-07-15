@@ -28,32 +28,52 @@ pub struct User {
 
 impl User {
     pub fn get_avatar_url(nick: &String) -> String {
-        format!("https://avatars.dicebear.com/api/{}/{}.svg", "pixel-art-neutral", nick)
+        format!(
+            "https://avatars.dicebear.com/api/{}/{}.svg",
+            "pixel-art-neutral", nick
+        )
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PostSender {
+pub struct UserData {
     pub id: i32,
     pub nick: String,
     pub avatar_url: String,
 }
 
-impl PostSender {
-    pub fn new(id: &i32, nick: &String) -> Self {
+impl UserData {
+    pub fn new(id: &i32, nick: &String, avatar_url: Option<String>) -> Self {
+        let avatar_url = avatar_url.unwrap_or(
+            User::get_avatar_url(&nick)
+        );
         Self {
             id: *id,
             nick: nick.clone(),
-            avatar_url: User::get_avatar_url(&nick),
+            avatar_url,
         }
     }
-    pub fn optional(id: &Option<i32>, nick: &Option<String>) -> Option<Self> {
+    pub fn optional(
+        id: &Option<i32>,
+        nick: &Option<String>,
+        avatar_url: Option<String>,
+    ) -> Option<Self> {
         if let Some(id) = id {
             if let Some(nick) = nick {
-                return Some(Self::new(id, nick));
+                return Some(Self::new(id, nick, avatar_url));
             }
         }
         None
+    }
+}
+
+impl From<&Row> for UserData {
+    fn from(row: &Row) -> Self {
+        UserData::new(
+            &row.get("id"),
+            &row.get("nick"),
+            row.try_get("avatar_url").ok(),
+        )
     }
 }
 
@@ -62,7 +82,7 @@ pub struct PostExtends {
     /// 这个字段留着后端用，前端需要用BigNumber，很麻烦...
     // #[serde(skip_serializing)]
     pub id: BigInt,
-    pub sender: PostSender,
+    pub sender: UserData,
     pub content: String,
     pub create_time: NaiveDateTime,
     pub like_count: i64,
@@ -80,18 +100,21 @@ pub struct PostExtends {
     pub origin_content: Option<String>,
     /// 转发人的昵称
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub origin_sender: Option<PostSender>,
+    pub origin_sender: Option<UserData>,
     /// 转发内容的创建时间
     #[serde(skip_serializing_if = "Option::is_none")]
     pub origin_create_time: Option<NaiveDateTime>,
 }
 
 impl From<&Row> for PostExtends {
-
     fn from(row: &Row) -> Self {
         Self {
             id: row.get("id"),
-            sender: PostSender::new(&row.get("sender_id"), &row.get("sender_nick")),
+            sender: UserData::new(
+                &row.get("sender_id"),
+                &row.get("sender_nick"),
+                row.try_get("sender_avatar_url").ok(),
+            ),
             content: row.get("content"),
             create_time: row.get("create_time"),
             like_count: row.get("likes"),
@@ -99,33 +122,17 @@ impl From<&Row> for PostExtends {
             comment_count: row.get("comments"),
             liked: false,
             hated: false,
-            origin_id: row.try_get("origin_id").ok(), 
+            origin_id: row.try_get("origin_id").ok(),
             origin_content: row.try_get("origin_content").ok(),
-            origin_sender: PostSender::optional(&row.try_get("origin_sender_id").ok(), &row.try_get("origin_sender_nick").ok()),
+            origin_sender: UserData::optional(
+                &row.try_get("origin_sender_id").ok(),
+                &row.try_get("origin_sender_nick").ok(),
+                row.try_get("origin_sender_avatar_url").ok(),
+            ),
             origin_create_time: row.try_get("origin_create_time").ok(),
         }
     }
 }
-
-// impl TryFrom<&Row> for PostExtends {
-//     type Error = MyError;
-
-//     fn try_from(row: &Row) -> Result<Self, Self::Error> {
-//         Ok(Self {
-//             id: row.try_get("id")?,
-//             nick: row.try_get("nick")?,
-//             content: row.try_get("content")?,
-//             create_time: row.try_get("create_time")?,
-//             like_count: row.try_get("likes")?,
-//             liked: false,
-//             comment_count: row.try_get("comments")?,
-//             origin_id: row.try_get("origin_id")?,
-//             origin_content: row.try_get("origin_content")?,
-//             origin_sender_nick: row.try_get("origin_sender_nick")?,
-//             origin_create_time: row.try_get("origin_create_time")?,
-//         })
-//     }
-// }
 
 #[async_trait]
 impl SyncCache for PostExtends {

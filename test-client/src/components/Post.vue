@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { reactive } from "@vue/reactivity";
 import client from "../axios/client";
-import router from "../pageRouter";
 import Heart from "../svg/heart.vue";
 import Comment from "../svg/comment.vue";
 import Hate from "../svg/Hate.vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 const props = defineProps<{
   item?: PostModel
@@ -21,7 +23,11 @@ const state = reactive({
 })
 
 const check_details = async () => {
-  router.push(`/po/${id}`);
+  console.log(`check_details ${id}`)
+  router.push({
+    name: 'po',
+    params: { id },
+  });
 }
 
 const like = async () => {
@@ -39,10 +45,12 @@ const like = async () => {
   }
 };
 
-const onOrigin = async (id: string) => {
-  console.log(`go to ${id}`)
-  // router.replace(`/po/${id}`);
-  window.location.href = `#/po/${id}`
+const onOrigin = async (_id: string) => {
+  console.log(`onOrigin ${_id}`)
+  router.push({
+    name: 'po',
+    params: { id: _id },
+  });
 }
 
 const hate = async () => {
@@ -60,6 +68,12 @@ const hate = async () => {
   }
 };
 
+const deletePost = async () => {
+  await client.delete('post', 'delete', {
+    data: { id }
+  })
+}
+
 </script>
 
 <template>
@@ -74,7 +88,7 @@ const hate = async () => {
       </div>
       <div class="mb-2 text-xl dark-white">{{ item!.content }}</div>
       <template v-if="item!.origin_id">
-        <div class="cursor-pointer border border-gray-400 rounded-md p-2 mb-2" @click="onOrigin(item!.origin_id!)">
+        <div class="cursor-pointer border border-gray-400 rounded-md p-2 mb-2" @click.stop="onOrigin(item!.origin_id!)">
           <div class="text-sm text-gray-400 mb-1">Origin</div>
           <div class="flex pb-2">
             <img class="avatar rounded" :src="item!.origin_sender!.avatar_url" alt="avatar"/>
@@ -93,6 +107,7 @@ const hate = async () => {
         <div class="ml-1 mr-2 dark-white select-none">{{state.comment_count}}</div>
         <Hate v-bind:hated="state.hated" @click="hate"/>
         <div class="ml-1 mr-2 dark-white select-none">{{state.hate_count}}</div>
+        <div class="ml-auto hover:underline" @click.stop="deletePost">Delete</div>
       </div>
     </div>
   </template>

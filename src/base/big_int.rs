@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Display, num::ParseIntError};
 
 use serde::{Serialize, Deserialize, de::Visitor};
 use tokio_postgres::types::{ToSql, Type, to_sql_checked, accepts, FromSql, IsNull};
@@ -20,9 +20,17 @@ impl BigInt {
     }
 }
 
-impl ToString for BigInt {
-    fn to_string(&self) -> String {
-        self.0.to_string()
+impl TryFrom<String> for BigInt {
+    type Error = ParseIntError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(Self::new(value.parse::<i64>()?))
+    }
+}
+
+impl Display for BigInt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0.to_string())
     }
 }
 
@@ -48,13 +56,28 @@ impl<'de> Visitor<'de> for BigIntVistor {
     type Value = BigInt;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("big int")
+        formatter.write_str("BigInt(i64)")
     }
 
     fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
         where
             E: serde::de::Error, {
         let num = v.parse::<i64>().map_err(|_e| serde::de::Error::custom("parse to i64 failed"))?;
+        Ok(BigInt::new(num))
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error, {
+        let num = v.parse::<i64>().map_err(|_e| serde::de::Error::custom("parse to i64 failed"))?;
+        Ok(BigInt::new(num))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error, {
+        let str = String::from_utf8_lossy(v).to_string();
+        let num = str.parse::<i64>().map_err(|_e| serde::de::Error::custom("parse to i64 failed"))?;
         Ok(BigInt::new(num))
     }
 

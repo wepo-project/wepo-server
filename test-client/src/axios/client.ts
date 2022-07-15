@@ -1,4 +1,4 @@
-import axios, { Method, AxiosPromise, AxiosRequestConfig } from "axios";
+import axios, { Method, AxiosPromise, AxiosRequestConfig, AxiosResponse } from "axios";
 import JsonBigInt from "json-bigint"
 import router from "../pageRouter";
 
@@ -6,12 +6,24 @@ interface NetClient {
   send(method: Method, model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
   post(model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
   get(model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
+  put(model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
+  delete(model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
   isLogined(): boolean
   loginWithAccount(nick: string, pwd: string): Promise<boolean>
   loginWithToken(): Promise<boolean>
+  isLoging: boolean;
+  waitingQueue: [DelayResolver, Method, string, string, AxiosRequestConfig?][]
+  getWaitingPromise(method: Method, model: string, func: string, config: AxiosRequestConfig | undefined): AxiosPromise;
+}
+
+interface DelayResolver {
+  (value: AxiosResponse | PromiseLike<AxiosResponse>): void;
 }
 
 const client: NetClient = {} as NetClient;
+
+client.isLoging = false;
+client.waitingQueue = [];
 
 const Authorization = "Authorization";
 
@@ -25,7 +37,6 @@ const fontStyle = {
 }
 
 axiosInstance.interceptors.request.use((config) => {
-  // config.transformRequest = [data => data]
   console.log(`%c${(new Date()).toLocaleString()} [${config.method}]%o`, fontStyle.request, config.url, config.method == "get" ? config.params : config.data);
   return config;
 }, (err) => {
@@ -36,10 +47,9 @@ axiosInstance.interceptors.response.use((resp) => {
   console.log(`%c${(new Date()).toLocaleString()} [${resp.config.method}(${resp.status})]%o`, fontStyle.response, resp.config.url, resp.data)
   return resp;
 }, (err) => {
-  // console.log(err);
   if (err.response && err.response.status == 401) {
     console.log("登录失效")
-    // router.push('/login');
+    router.push('/login');
   }
   return Promise.reject(err)
 })
@@ -49,18 +59,13 @@ axiosInstance.defaults.transformResponse = [data => {
   if (data) {
     try {
       return JsonBigInt.parse(data)
-    } catch(e) {
+    } catch (e) {
       console.error(e)
       return data
     }
   }
   return data
 }]
-
-// axiosInstance.defaults.transformRequest = [(data, headers) => {
-//   console.log(typeof data?.origin);
-//   return JSON.stringify(data)
-// }]
 
 export default client;
 
@@ -86,6 +91,10 @@ const saveToken = (token: string): boolean => {
  * @returns 
  */
 client.send = (method: Method, model: string, func: string, config?: AxiosRequestConfig) => {
+  if (client.isLoging) {
+    console.log('Waiting for Login');
+    return client.getWaitingPromise(method, model, func, config);
+  }
   return axiosInstance({
     ...config,
     method: method,
@@ -95,6 +104,14 @@ client.send = (method: Method, model: string, func: string, config?: AxiosReques
 
 client.get = client.send.bind(client, 'GET');
 client.post = client.send.bind(client, 'POST');
+client.put = client.send.bind(client, 'PUT');
+client.delete = client.send.bind(client, 'DELETE');
+
+client.getWaitingPromise = (method: Method, model: string, func: string, config: AxiosRequestConfig | undefined) => {
+  return new Promise<AxiosResponse>((resolve, _reject) => {
+    client.waitingQueue.push([resolve, method, model, func, config]);
+  })
+}
 
 /**
  * 
@@ -107,15 +124,13 @@ client.isLogined = () => axiosInstance.defaults.headers.common[Authorization] !=
  * @param nick 
  * @param pwd 
  */
-client.loginWithAccount = async (nick: string, pwd: string): Promise<boolean> => {
-  const resp = await client.post('user', 'login', {
-    data: { nick, pwd },
-    headers: {
-      [Authorization]: "Bearer login"
-    }
-  });
-  return saveToken(resp.data["token"]);
-}
+client.loginWithAccount = async (
+  nick: string,
+  pwd: string
+): Promise<boolean> =>
+  wrapLoginCall(() => client.post('user', 'login', {
+    data: { nick, pwd }
+  }), (data) => data["token"]);
 
 /**
  * token登录
@@ -123,14 +138,48 @@ client.loginWithAccount = async (nick: string, pwd: string): Promise<boolean> =>
 client.loginWithToken = async (): Promise<boolean> => {
   const token = getSavedToken();
   if (token) {
-    const resp = await client.get('token', 'login', {
+    return wrapLoginCall(() => client.get('token', 'login', {
       headers: {
         [Authorization]: token
       }
-    });
-    return saveToken(resp.data);
+    }));
   }
   return false;
+}
+
+/**
+ * 包装两种登录的方法
+ * @param acitonCall 
+ * @param tokenExtractor 
+ * @returns 
+ */
+const wrapLoginCall = async (
+  acitonCall: () => AxiosPromise,
+  tokenExtractor: (data: any) => any = data => data
+): Promise<boolean> => {
+  try {
+    const request = acitonCall();
+    client.isLoging = true
+    const resp = await request;
+    client.isLoging = false
+    let result = saveToken(tokenExtractor(resp.data));
+    while(client.waitingQueue.length) {
+      let data = client.waitingQueue.shift()!;
+      let [resolve, method, model, func, config] = data;
+      try {
+        resolve(client.send(method, model, func, config))
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    return result;
+  } catch (e) {
+    console.error(e)
+    return false
+  } finally {
+    client.isLoging = false
+  }
 }
 
 (window as any).client = client;

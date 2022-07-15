@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::data_models::UserData;
+
 #[derive(Deserialize, Serialize)]
 pub struct RegisterUserDTO {
     pub nick: String,
@@ -31,4 +33,19 @@ pub struct LoginResultDTO {
 #[derive(Deserialize, Serialize)]
 pub struct ChangeNickDTO {
     pub nick: String,
+}
+
+
+
+#[derive(Deserialize, Serialize)]
+pub struct SearchUserDTO {
+    pub nick: String,
+    pub page: i64,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct SearchUserResultDTO {
+    pub page: i64,
+    pub next: bool,
+    pub list: Vec<UserData>,
 }

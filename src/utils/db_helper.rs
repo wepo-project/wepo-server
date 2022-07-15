@@ -52,6 +52,7 @@ macro_rules! cmd_define {
     ),* $(,)?) => {
         $(
             $(#[$outer])*
+            #[allow(dead_code)]
             pub fn $i($($arg: &String,)*) -> Command {
                 cmd![stringify!($i), $($arg,)*]
             }

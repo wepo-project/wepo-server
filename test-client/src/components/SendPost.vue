@@ -6,7 +6,7 @@ const content = ref('')
 
 async function onSend() {
   if (content.value != '') {
-    const resp = await client.post('post', 'add_post', {
+    const resp = await client.post('post', 'send', {
       data: {
         content: content.value,
       }

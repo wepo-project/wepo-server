@@ -28,5 +28,5 @@ FROM (
 ) AS r1
 LEFT JOIN main.posts p1 ON p1.id = r1.extends
 LEFT JOIN main.users u1 ON p1.sender = u1.id
-ORDER BY p1.create_time ASC
+ORDER BY r1.create_time DESC
 LIMIT $2 OFFSET $3;

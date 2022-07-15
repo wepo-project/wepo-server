@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::data_models::PostExtends;
+use crate::{data_models::PostExtends, base::big_int::BigInt};
 
 #[derive(Deserialize, Serialize)]
 pub struct AddPostDTO {
@@ -14,7 +14,7 @@ pub struct AddPostResultDTO {
 
 #[derive(Deserialize, Serialize)]
 pub struct DelPostDTO {
-    pub id: i64,
+    pub id: BigInt,
 }
 
 

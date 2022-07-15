@@ -25,7 +25,6 @@ const state = reactive({
             border-x-0 border-t-0 border-b-2 border-transparent
             px-6
             py-3
-            my-2
             dark-white
             hover:border-transparent hover:bg-gray-100
             focus:border-transparent

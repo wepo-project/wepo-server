@@ -65,10 +65,21 @@ pub async fn delete(
     client
         .query(&stmt, &[&del_data.id, &user.id])
         .await
-        .map(|_| {
+        .map(|vec| {
             // 删除post的redis缓存数据
-            redis_addr.del(&RedisKey::post_likes(&del_data.id));
-            redis_addr.del(&RedisKey::post_like_count(&del_data.id));
+            let id = &del_data.id;
+            redis_addr.del(&RedisKey::post_likes(id)); // 删除赞集合
+            redis_addr.del(&RedisKey::post_like_count(id)); // 删除赞数量
+            // redis_addr.del(&RedisKey::post_comments(id)); // 删除评论
+            redis_addr.del(&RedisKey::post_hates(id)); // 删除讨厌
+            redis_addr.del(&RedisKey::post_hate_count(id)); // 删除讨厌数量
+            if let Some(row) = vec.first() {
+                let extends_id: Option<i64> = row.get("extends");
+                if let Some(extends_id) = extends_id {
+                    // redis_addr.do_send(RedisCmd::srem(&RedisKey::post_comments(extends_id), &id.to_string()));
+                    redis_addr.do_send(RedisCmd::decr(&RedisKey::post_comments_count(extends_id)));
+                }
+            }
         })
         .map_err(MyError::PGError)
 }
@@ -223,8 +234,6 @@ pub async fn comment(
     // 评论成功 修改原本的post信息
     let _ret = redis_addr
         .exec_all(vec![
-            // 标记为评论
-            RedisCmd::lpush(&RedisKey::post_comments(&origin_id), &post_id.to_string()),
             // 增加原po的评论数
             RedisCmd::incr(&RedisKey::post_comments_count(&origin_id)),
         ])

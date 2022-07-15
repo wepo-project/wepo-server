@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import client from '../axios/client';
 import router from '../pageRouter';
 import Post from './Post.vue';
@@ -34,6 +34,12 @@ async function onComment() {
     });
     if (resp.data.id) {
       content.value = ""
+      if (state.post) {
+        state.post = {
+          ...state.post!,
+          comment_count: state.post!.comment_count + 1,
+        }
+      }
     }
   }
 }
@@ -42,15 +48,11 @@ async function onComment() {
 
 <template>
   <div>
-    <div>DETAIL</div>
     <Post v-if="state.post" :item="state.post"></Post>
-    <br/>
-    <div class="flex flex-col px-2">
+    <div class="flex flex-col px-2 my-2">
       <textarea v-model="content" class="input w-full h-20 p-2 "></textarea>
       <div class="btn btn-blue w-fit mt-2" @click="onComment">Comment</div>
     </div>
-    <br/>
-    <br/>
     <template v-if="state.comments && state.comments.length">
       <div v-for="(item) in state.comments">
         <Post :item="item"></Post>
