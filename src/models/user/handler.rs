@@ -1,9 +1,6 @@
 use crate::{
-    base::user_info::UserInfo,
-    models::user::auth as AuthHandler,
-    db,
-    errors::MyError,
-    models::user::dto::*,
+    base::user_info::UserInfo, data_models::UserData, db, errors::MyError,
+    models::user::auth as AuthHandler, models::user::dto::*,
 };
 
 use actix_web::{web, Error, HttpResponse};
@@ -45,8 +42,7 @@ pub async fn login(
     info!("User Login:{:?}", user);
 
     let result = LoginResultDTO {
-        id: user.id,
-        nick: user.nick,
+        user,
         token: token.clone(),
     };
 
@@ -54,10 +50,25 @@ pub async fn login(
 }
 
 /// 用token登录
-pub async fn login_with_token(user: UserInfo) -> Result<HttpResponse, MyError> {
-    info!("User Login:{:?}", user);
+pub async fn login_with_token(
+    user: UserInfo,
+    db_pool: web::Data<Pool>,
+) -> Result<HttpResponse, MyError> {
+    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
+    let user = db::user::validate_user(
+        &client,
+        LoginUserDTO {
+            nick: user.nick.clone(),
+            pwd: None,
+        },
+    )
+    .await?;
     let new_token = AuthHandler::create_jwt(&user.id, &user.nick)?;
-    Ok(HttpResponse::Ok().json(new_token))
+    info!("User Login:{:?}", user);
+    Ok(HttpResponse::Ok().json(LoginResultDTO {
+        user,
+        token: new_token,
+    }))
 }
 
 /// 修改昵称

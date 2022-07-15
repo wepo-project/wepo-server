@@ -53,7 +53,7 @@ pub(crate) fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
 }
 
 /// 验证用户
-pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<User, MyError> {
+pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<UserData, MyError> {
     let _stmt = include_str!("../../sql/user/get_user.sql");
     // let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
@@ -72,7 +72,7 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<U
             let _enc_pwd = pwd_encrypt(_raw_pwd, &user._salt);
             if _pwd.eq(&_enc_pwd) {
                 // 密码正确
-                Ok(user)
+                Ok(user.to_user_data())
             } else {
                 // 密码不相同202
                 Err(MyError::code(202))
@@ -83,7 +83,7 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<U
         }
     } else {
         // 不用密码
-        Ok(user)
+        Ok(user.to_user_data())
     }
 }
 

@@ -1,1 +1,1 @@
-SELECT * from main.users where nick = $1
+SELECT id, nick, avatar_url from main.users where nick = $1;

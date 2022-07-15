@@ -29,7 +29,7 @@ const onAuth = () => {
 
 <template>
   <div class="flex flex-col h-screen">
-    <router-view @auth="onAuth" class="flex-auto" :key="route.fullPath"></router-view>
+    <router-view @auth="onAuth" class="flex-auto overflow-scroll" :key="route.fullPath"></router-view>
     <tabbar v-if="state.isLogined"></tabbar>
   </div>
 </template>

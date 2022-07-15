@@ -7,14 +7,14 @@ interface PostModel {
     comment_count: number
     liked: boolean
     hated: boolean
-    sender: PostSender
+    sender: UserData
     origin_content?: string
     origin_id?: string
-    origin_sender?: PostSender
+    origin_sender?: UserData
     origin_create_time?: string
 }
 
-interface PostSender {
+interface UserData {
     id: string,
     nick: string,
     avatar_url: string

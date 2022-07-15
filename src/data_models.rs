@@ -33,6 +33,9 @@ impl User {
             "pixel-art-neutral", nick
         )
     }
+    pub fn to_user_data(&self) -> UserData {
+        UserData::new(&self.id, &self.nick, self.avatar_url.clone())
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

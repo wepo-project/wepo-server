@@ -130,7 +130,7 @@ client.loginWithAccount = async (
 ): Promise<boolean> =>
   wrapLoginCall(() => client.post('user', 'login', {
     data: { nick, pwd }
-  }), (data) => data["token"]);
+  }));
 
 /**
  * token登录
@@ -155,7 +155,7 @@ client.loginWithToken = async (): Promise<boolean> => {
  */
 const wrapLoginCall = async (
   acitonCall: () => AxiosPromise,
-  tokenExtractor: (data: any) => any = data => data
+  tokenExtractor: (data: any) => any = data => data["token"]
 ): Promise<boolean> => {
   try {
     const request = acitonCall();
@@ -163,6 +163,7 @@ const wrapLoginCall = async (
     const resp = await request;
     client.isLoging = false
     let result = saveToken(tokenExtractor(resp.data));
+    
     while(client.waitingQueue.length) {
       let data = client.waitingQueue.shift()!;
       let [resolve, method, model, func, config] = data;
