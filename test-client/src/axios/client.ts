@@ -109,7 +109,10 @@ client.isLogined = () => axiosInstance.defaults.headers.common[Authorization] !=
  */
 client.loginWithAccount = async (nick: string, pwd: string): Promise<boolean> => {
   const resp = await client.post('user', 'login', {
-    data: { nick, pwd }
+    data: { nick, pwd },
+    headers: {
+      [Authorization]: "Bearer login"
+    }
   });
   return saveToken(resp.data["token"]);
 }

@@ -9,14 +9,14 @@ mod traits;
 
 use crate::config::WepoConfig;
 use crate::{
-    models::post::handler as PostHandler,
     models::user::handler as UserHandler,
+    models::user::auth as AuthHandler,
+    models::post::handler as PostHandler,
 };
 use ::config::Config;
 use actix_cors::Cors;
 use actix_redis::RedisActor;
 use actix_web::{http, web::{self, get, post, delete}, App, HttpServer};
-use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
 use log::info;
 use tokio_postgres::NoTls;
@@ -37,7 +37,6 @@ async fn main() -> std::io::Result<()> {
     let pool = config.pg.create_pool(None, NoTls).unwrap();
 
     let server = HttpServer::new(move || {
-        let auth = HttpAuthentication::bearer(models::user::handler::auth_validator);
         let cors = Cors::default()
             .allow_any_origin()
             .allowed_methods(vec!["GET", "POST", "DELETE", "PUT"])
@@ -56,13 +55,13 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/v1")
                     .service(
                         web::scope("/token")
-                            .route("/login", get().to(UserHandler::login_with_token))
-                            .wrap(HttpAuthentication::bearer(models::user::handler::token_addon_middleware)),
+                            .route("/login", get().to(UserHandler::login_with_token)),
                     )
                     .service(
                         web::scope("/user")
-                            .route("/add_user", post().to(UserHandler::register))
-                            .route("/login", post().to(UserHandler::login)),
+                            .route("/register", post().to(UserHandler::register))
+                            .route("/login", post().to(UserHandler::login))
+                            .route("/change_nick", post().to(UserHandler::change_nick)),
                     )
                     .service(
                         web::scope("/post")
@@ -75,7 +74,6 @@ async fn main() -> std::io::Result<()> {
                             .route("/get_post", get().to(PostHandler::get_one))
                             .route("/my_post", post().to(PostHandler::mine))
                             .route("/comment", post().to(PostHandler::comment))
-                            .wrap(auth),
                     ),
             )
     })

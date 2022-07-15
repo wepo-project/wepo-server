@@ -1,11 +1,16 @@
-use crate::{models::user::dto::{LoginUserDTO, RegisterUserDTO}, errors::MyError, data_models::User, utils};
+use crate::{
+    data_models::User,
+    errors::MyError,
+    models::user::dto::{LoginUserDTO, RegisterUserDTO},
+    utils,
+};
 use deadpool_postgres::Client;
 use log::info;
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_postgres::error::SqlState;
 
 /// 数据库添加用户
-pub async fn add_user(client: &Client, mut user_info: RegisterUserDTO) -> Result<User, MyError> {
+pub async fn add(client: &Client, mut user_info: RegisterUserDTO) -> Result<User, MyError> {
     let _stmt = include_str!("../../sql/user/add_user.sql");
     let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
@@ -55,7 +60,6 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<U
     // let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 
-
     let user = client
         .query(&stmt, &[&user_info.nick])
         .await?
@@ -83,7 +87,19 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<U
         // 不用密码
         Ok(user)
     }
+}
 
+pub async fn change_nick(client: &Client, id: &i32, nick: &String) -> Result<String, MyError> {
+    let _stmt = include_str!("../../sql/user/change_nick.sql");
+    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    client
+        .query(&stmt, &[id, nick])
+        .await?
+        .iter()
+        .map(|r| r.get("nick"))
+        .collect::<Vec<String>>()
+        .pop()
+        .ok_or(MyError::FailResultError)
 }
 
 #[cfg(test)]

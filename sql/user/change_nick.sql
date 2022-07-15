@@ -1,1 +1,1 @@
-UPDATE main.users SET nick = $1 WHERE id = $2;
+UPDATE main.users SET nick = $1 WHERE id = $2 RETURNING nick;

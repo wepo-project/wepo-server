@@ -1,17 +1,14 @@
 use crate::{
-    base::{token_str::TokenStr, user_info::UserInfo},
+    base::user_info::UserInfo,
+    models::user::auth as AuthHandler,
     db,
     errors::MyError,
     models::user::dto::*,
 };
 
-use actix_web::{dev::ServiceRequest, web, Error, HttpMessage, HttpResponse};
-use actix_web_httpauth::extractors::bearer::BearerAuth;
-use chrono::Utc;
+use actix_web::{web, Error, HttpResponse};
 use deadpool_postgres::{Client, Pool};
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use log::info;
-use serde::{Deserialize, Serialize};
 
 /// 用户注册
 pub async fn register(
@@ -22,7 +19,7 @@ pub async fn register(
     if user_info.nick.is_empty() {
         return Err(MyError::code(301));
     }
-    let new_user = db::user::add_user(&client, user_info.0).await?;
+    let new_user = db::user::add(&client, user_info.0).await?;
     info!("creating a new user:{}", new_user.nick);
     let result = RegisterResultDTO {
         id: new_user.id,
@@ -43,7 +40,7 @@ pub async fn login(
 
     let user = db::user::validate_user(&client, user_info).await?;
 
-    let token = add_token_prefix(create_jwt(&user.id, &user.nick)?);
+    let token = AuthHandler::create_jwt(&user.id, &user.nick)?;
 
     info!("User Login:{:?}", user);
 
@@ -57,106 +54,23 @@ pub async fn login(
 }
 
 /// 用token登录
-pub async fn login_with_token(
-    data: TokenStr,
-) -> Result<HttpResponse, MyError> {
-    let data = validate_token(&data.token)?;
-    let user = data.claims.into_user_info();
+pub async fn login_with_token(user: UserInfo) -> Result<HttpResponse, MyError> {
     info!("User Login:{:?}", user);
-    let new_token = add_token_prefix(create_jwt(&user.id, &user.nick)?);
+    let new_token = AuthHandler::create_jwt(&user.id, &user.nick)?;
     Ok(HttpResponse::Ok().json(new_token))
 }
 
-// pub async fn change_nick(
-//     data: web::Json<ChangeNickDTO>,
-// ) -> Result<HttpResponse, MyError> {
-
-// }
+/// 修改昵称
+pub async fn change_nick(
+    user: UserInfo,
+    data: web::Json<ChangeNickDTO>,
+    db_pool: web::Data<Pool>,
+) -> Result<HttpResponse, MyError> {
+    let mut data = data.into_inner();
+    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
+    let nick = db::user::change_nick(&client, &user.id, &data.nick).await?;
+    data.nick = nick;
+    Ok(HttpResponse::Ok().json(data))
+}
 
 // ============================================
-
-const JWT_SECRET: &[u8] = b"wepo_Jwt_Xecret";
-
-pub fn create_jwt(id: &i32, _nick: &String) -> Result<String, MyError> {
-    let expiration = Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(3600))
-        .expect("valid timestamp")
-        .timestamp();
-
-    let header = Header::new(Algorithm::HS512);
-    let claims = Claims::new(id, _nick, expiration as usize);
-
-    jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(JWT_SECRET))
-        .map_err(|_| MyError::JWTTokenCreationError)
-}
-
-/// 把token加上前缀
-fn add_token_prefix(token: String) -> String {
-    format!("Bearer {}", token)
-}
-
-/// 中间件的验证token方法
-pub async fn auth_validator(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
-    let token = auth.token();
-    let decoded = validate_token(token)?;
-    // 添加进拓展值，后续的handler直接在参数中可以直接使用 UserInfo
-    req.extensions_mut().insert(decoded.claims.into_user_info());
-    Ok(req)
-}
-
-/// 验证token方法
-fn validate_token(token: &str) -> Result<TokenData<Claims>, MyError> {
-    let validation = Validation::new(Algorithm::HS512);
-    let key = DecodingKey::from_secret(JWT_SECRET);
-    let data = jsonwebtoken::decode::<Claims>(token, &key, &validation) //
-        .map_err(|_e| {
-            info!("token错误");
-            MyError::JWTTokenError
-        })?;
-    Ok(data)
-}
-
-/// token登录时的中间件方法
-pub async fn token_addon_middleware(req: ServiceRequest, auth: BearerAuth) -> Result<ServiceRequest, Error> {
-    let token = auth.token();
-    req.extensions_mut().insert(TokenStr {
-        token: token.to_string(),
-    });
-    Ok(req)
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Claims {
-    iss: String,
-    pub sub: String,
-    pub exp: usize,
-    pub id: i32,
-}
-
-impl Claims {
-    pub(crate) fn new(id: &i32, nick: &String, exp: usize) -> Self {
-        Self {
-            iss: String::from("wepo"),
-            sub: nick.to_owned(),
-            id: *id,
-            exp,
-        }
-    }
-
-    pub fn into_user_info(self) -> UserInfo {
-        UserInfo {
-            id: self.id,
-            nick: self.sub,
-        }
-    }
-}
-
-// #[derive(Debug, Serialize, Deserialize)]
-// struct Claims {
-//     aud: String,         // Optional. Audience
-//     exp: usize,          // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
-//     iat: usize,          // Optional. Issued at (as UTC timestamp)
-//     iss: String,         // Optional. Issuer
-//     nbf: usize,          // Optional. Not Before (as UTC timestamp)
-//     sub: String,         // Optional. Subject (whom token refers to)
-// }

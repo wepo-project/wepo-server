@@ -17,6 +17,7 @@ pub enum MyError {
     JWTTokenCreationError,
     FailResultError,
     JWTTokenError,
+    AuthorizationNotFound,
     ParseError,
     /// 互斥锁中毒错误
     PoisonError,
