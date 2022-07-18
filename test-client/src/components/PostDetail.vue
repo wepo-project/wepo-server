@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { onMounted, reactive, ref, watch } from 'vue';
 import client from '../axios/client';
+import { PostModel } from '../data';
 import router from '../pageRouter';
 import Post from './Post.vue';
 
@@ -48,7 +49,7 @@ async function onComment() {
 
 <template>
   <div>
-    <Post v-if="state.post" :item="state.post"></Post>
+    <Post v-if="state.post" :item="state.post" :show-delete="true"></Post>
     <div class="flex flex-col px-2 my-2">
       <textarea v-model="content" class="input w-full h-20 p-2 "></textarea>
       <div class="btn btn-blue w-fit mt-2" @click="onComment">Comment</div>

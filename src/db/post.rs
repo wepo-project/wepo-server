@@ -35,7 +35,6 @@ fn get_next_id() -> Result<i64, MyError> {
 /// 添加
 pub async fn add(user: &UserInfo, post_data: &AddPostDTO, client: &Client) -> Result<i64, MyError> {
     let _stmt = include_str!("../../sql/post/add.sql");
-    // let _stmt = _stmt.replace("$table_fields", &Post::sql_table_fields());
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
     let post_id = get_next_id()?;
     client
@@ -72,16 +71,9 @@ pub async fn delete(
         redis_addr.del(&RedisKey::post_like_count(id)); // 删除赞数量
         redis_addr.del(&RedisKey::post_hates(id)); // 删除讨厌
         redis_addr.del(&RedisKey::post_hate_count(id)); // 删除讨厌数量
-        // 修改原po的评论数量
-        if let Some(row) = vec.first() {
-            let extends_id: Option<i64> = row.get("extends");
-            if let Some(extends_id) = extends_id {
-                redis_addr.do_send(RedisCmd::decr(&RedisKey::post_comments_count(extends_id)));
-            }
-        }
         Ok(())
     } else {
-        Err(MyError::code(201))
+        Err(MyError::err_code(201))
     }
 }
 
@@ -152,7 +144,7 @@ pub async fn like(
         .await?;
     if liked.integer_to_bool() {
         // 已经点赞
-        return Err(MyError::code(201));
+        return Err(MyError::err_code(201));
     }
 
     redis_addr
@@ -180,7 +172,7 @@ pub async fn cancel_like(
 
     if !liked.integer_to_bool() {
         // 没有点赞，取消点赞则返回
-        return Err(MyError::code(201));
+        return Err(MyError::err_code(201));
     }
 
     redis_addr
@@ -221,26 +213,15 @@ pub async fn comment(
     user: &UserInfo,
     data: &CommentPostDTO,
     client: &Client,
-    redis_addr: &Addr<RedisActor>,
 ) -> Result<i64, MyError> {
     let _stmt = include_str!("../../sql/post/comment.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
     let post_id = get_next_id()?;
     let origin_id: i64 = utils::string_to_i64(&data.origin_id);
-    // 插入一条数据
-    let pg_ret = client
+    
+    client
         .query(&stmt, &[&post_id, &user.id, &data.content, &origin_id])
-        .await?;
-
-    // 评论成功 修改原本的post信息
-    let _ret = redis_addr
-        .exec_all(vec![
-            // 增加原po的评论数
-            RedisCmd::incr(&RedisKey::post_comments_count(&origin_id)),
-        ])
-        .await;
-
-    pg_ret
+        .await?
         .iter()
         .map(|row| row.get("id"))
         .collect::<Vec<i64>>()
@@ -261,7 +242,7 @@ pub async fn hate(
         .await?;
     if hated.integer_to_bool() {
         // 已经不喜欢
-        return Err(MyError::code(201));
+        return Err(MyError::err_code(201));
     }
 
     redis_addr
@@ -289,7 +270,7 @@ pub async fn cancel_hate(
 
     if !hated.integer_to_bool() {
         // 没有反感，返回
-        return Err(MyError::code(201));
+        return Err(MyError::err_code(201));
     }
 
     redis_addr

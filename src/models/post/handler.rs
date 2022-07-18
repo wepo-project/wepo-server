@@ -1,12 +1,15 @@
-
 use actix::Addr;
 use actix_redis::RedisActor;
-use actix_web::{web, Error, HttpResponse};
+use actix_web::{web, Error, HttpResponse, Responder};
 use deadpool_postgres::{Client, Pool};
 use log::info;
 
 use crate::{
-    base::{resp::ResultResponse, user_info::UserInfo},
+    base::{
+        paging_data::{PagingData, PagingDataBuilder, GetPageDTO},
+        resp::ResultResponse,
+        user_info::UserInfo,
+    },
     db,
     errors::MyError,
     models::post::dto::*,
@@ -22,7 +25,9 @@ pub async fn add(
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let post_id = db::post::add(&user, &post_body, &client).await?;
     info!("New Post:{}", post_id);
-    let result = AddPostResultDTO { id: post_id.to_string() };
+    let result = AddPostResultDTO {
+        id: post_id.to_string(),
+    };
     Ok(HttpResponse::Ok().json(result))
 }
 
@@ -80,13 +85,11 @@ pub async fn mine(
     /// 每页的数量
     const COUNT_PER_PAGE: i64 = 20;
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::get_mine(&user, &body.page, &COUNT_PER_PAGE, &client, &redis_addr).await?;
-    let next = post.len() >= COUNT_PER_PAGE as usize;
-    Ok(HttpResponse::Ok().json(GetPostsResultDTO{
-        page: body.page,
-        next,
-        list: post,
-    }))
+
+    Ok(HttpResponse::Ok().json(
+        PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
+        .set_list(db::post::get_mine(&user, &body.page, &COUNT_PER_PAGE, &client, &redis_addr).await?)
+    ))
 }
 
 /// 评论
@@ -94,15 +97,15 @@ pub async fn comment(
     user: UserInfo,
     body: web::Json<CommentPostDTO>,
     db_pool: web::Data<Pool>,
-    redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post_id = db::post::comment(&user, &body, &client, &redis_addr).await?;
+    let post_id = db::post::comment(&user, &body, &client).await?;
     info!("New Comment:{}", post_id);
-    let result = AddPostResultDTO { id: post_id.to_string() };
+    let result = AddPostResultDTO {
+        id: post_id.to_string(),
+    };
     Ok(HttpResponse::Ok().json(result))
 }
-
 
 /// 反感
 pub async fn hate(
@@ -130,15 +133,12 @@ pub async fn browse(
     body: web::Query<GetPageDTO>,
     db_pool: web::Data<Pool>,
     redis_addr: web::Data<Addr<RedisActor>>,
-) -> Result<HttpResponse, Error> {
+) -> Result<impl Responder, Error> {
     /// 每页的数量
     const COUNT_PER_PAGE: i64 = 20;
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let post = db::post::browse(&user, &client, &body.page, &COUNT_PER_PAGE, &redis_addr).await?;
-    let next = post.len() >= COUNT_PER_PAGE as usize;
-    Ok(HttpResponse::Ok().json(GetPostsResultDTO{
-        page: body.page,
-        next,
-        list: post,
-    }))
+    Ok(HttpResponse::Ok().json(
+        PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
+        .set_list(db::post::browse(&user, &client, &body.page, &COUNT_PER_PAGE, &redis_addr).await?)
+    ))
 }

@@ -50,7 +50,7 @@ pub struct Claims {
 }
 
 impl Claims {
-    pub(crate) fn new(id: &i32, nick: &String, exp: usize) -> Self {
+    pub fn new(id: &i32, nick: &String, exp: usize) -> Self {
         Self {
             iss: String::from("wepo"),
             sub: nick.to_owned(),

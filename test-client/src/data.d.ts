@@ -1,4 +1,4 @@
-interface PostModel {
+export interface PostModel {
     content: string
     create_time: string
     id: string
@@ -14,7 +14,7 @@ interface PostModel {
     origin_create_time?: string
 }
 
-interface UserData {
+export interface UserData {
     id: string,
     nick: string,
     avatar_url: string

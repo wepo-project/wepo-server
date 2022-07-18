@@ -1,5 +1,5 @@
 use crate::{
-    base::user_info::UserInfo, data_models::UserData, db, errors::MyError,
+    base::user_info::UserInfo, db, errors::MyError,
     models::user::auth as AuthHandler, models::user::dto::*,
 };
 
@@ -14,7 +14,7 @@ pub async fn register(
 ) -> Result<HttpResponse, MyError> {
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     if user_info.nick.is_empty() {
-        return Err(MyError::code(301));
+        return Err(MyError::err_code(301));
     }
     let new_user = db::user::add(&client, user_info.0).await?;
     info!("creating a new user:{}", new_user.nick);
@@ -35,7 +35,7 @@ pub async fn login(
 
     let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
 
-    let user = db::user::validate_user(&client, user_info).await?;
+    let user = db::user::validate_user(&client, user_info, false).await?;
 
     let token = AuthHandler::create_jwt(&user.id, &user.nick)?;
 
@@ -61,6 +61,7 @@ pub async fn login_with_token(
             nick: user.nick.clone(),
             pwd: None,
         },
+        true,
     )
     .await?;
     let new_token = AuthHandler::create_jwt(&user.id, &user.nick)?;

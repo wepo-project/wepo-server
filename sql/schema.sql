@@ -43,23 +43,45 @@ CREATE TABLE IF NOT EXISTS main.posts
     -- 创建时间
     create_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- 点赞数量
-    likes bigint NOT NULL DEFAULT 0,
+    likes integer NOT NULL DEFAULT 0,
     -- 评论数量
-    comments bigint NOT NULL DEFAULT 0,
+    comments integer NOT NULL DEFAULT 0,
     -- 讨厌数量
-    hates bigint NOT NULL DEFAULT 0,
+    hates integer NOT NULL DEFAULT 0,
     -- 继承（评论）哪条po文
-    extends bigint REFERENCES main.posts(id),
+    extends bigint REFERENCES main.posts(id) ON DELETE CASCADE,
+    -- 主键约束
     CONSTRAINT posts_pkey PRIMARY KEY (id)
 );
 
--- -- post like表
--- CREATE TABLE IF NOT EXISTS main.post_likes
--- (
---     -- po文id
---     post_id bigint NOT NULL REFERENCES main.posts(id) on DELETE CASCADE,
---     -- 用户id
---     user_id integer NOT NULL REFERENCES main.users(id) on DELETE CASCADE,
---     -- 两者为主键
---     PRIMARY KEY (post_id, user_id)
--- );
+-- 通知
+CREATE TABLE IF NOT EXISTS main.notices
+(
+    -- id
+    notice_id uuid NOT NULL DEFAULT gen_random_uuid(),
+    -- 接收者
+    addressee_id integer NOT NULL REFERENCES main.users(id) ON DELETE CASCADE,
+    -- 类型
+    notice_type character(1) NOT NULL,
+    -- 各个参数
+    args text[] NOT NULL,
+    -- 创建时间
+    create_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- 是否已读
+    read boolean NOT NULL DEFAULT FASLE,
+    -- 主键约束
+    CONSTRAINT notices_pkey PRIMARY KEY (notice_id)
+)
+
+-- 好友关系表
+CREATE TABLE IF NOT EXISTS main.friendship
+(
+    -- 请求者
+    requester_id integer NOT NULL REFERENCES main.users(id) ON DELETE CASCADE,
+    -- 接收者
+    addressee_id integer NOT NULL REFERENCES main.users(id) ON DELETE CASCADE,
+    -- 创建日期
+    create_time DATE NOT NULL DEFAULT CURRENT_DATE,
+    -- 主键约束
+    CONSTRAINT friendship_pkey PRIMARY KEY (requester_id, addressee_id)
+)

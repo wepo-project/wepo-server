@@ -30,20 +30,6 @@ pub struct GetPostDTO {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct GetPageDTO {
-    pub page: i64,
-}
-
-
-#[derive(Deserialize, Serialize)]
-pub struct GetPostsResultDTO {
-    pub page: i64,
-    pub next: bool,
-    pub list: Vec<PostExtends>,
-}
-
-
-#[derive(Deserialize, Serialize)]
 pub struct CommentPostDTO {
     pub content: String,
     pub origin_id: String,

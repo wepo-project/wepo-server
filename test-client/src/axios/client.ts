@@ -1,6 +1,7 @@
 import axios, { Method, AxiosPromise, AxiosRequestConfig, AxiosResponse } from "axios";
 import JsonBigInt from "json-bigint"
 import router from "../pageRouter";
+import store from "../store";
 
 interface NetClient {
   send(method: Method, model: string, func: string, config?: AxiosRequestConfig): AxiosPromise
@@ -154,15 +155,17 @@ client.loginWithToken = async (): Promise<boolean> => {
  * @returns 
  */
 const wrapLoginCall = async (
-  acitonCall: () => AxiosPromise,
-  tokenExtractor: (data: any) => any = data => data["token"]
+  acitonCall: () => AxiosPromise
 ): Promise<boolean> => {
   try {
     const request = acitonCall();
     client.isLoging = true
     const resp = await request;
     client.isLoging = false
-    let result = saveToken(tokenExtractor(resp.data));
+    let token = resp.data["token"];
+    let user = resp.data["user"];
+    let result = saveToken(token);
+    store.commit('changeUser', user);
     
     while(client.waitingQueue.length) {
       let data = client.waitingQueue.shift()!;
@@ -172,6 +175,10 @@ const wrapLoginCall = async (
       } catch (e) {
         console.error(e);
       }
+    }
+
+    if (router.currentRoute.value.name == "login") {
+      router.push("/")
     }
 
     return result;

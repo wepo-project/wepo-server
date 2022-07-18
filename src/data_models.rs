@@ -155,7 +155,6 @@ impl SyncCache for PostExtends {
             .exec_all({
                 let mut vec = vec![
                     RedisCmd::get(&RedisKey::post_like_count(&id)),
-                    RedisCmd::get(&RedisKey::post_comments_count(&id)),
                     RedisCmd::get(&RedisKey::post_hate_count(&id)),
                 ];
                 if have_user {
@@ -175,11 +174,6 @@ impl SyncCache for PostExtends {
         if let Some(val) = ret.next() {
             if let Some(num) = val.bulk_to_i64() {
                 self.like_count = num;
-            }
-        }
-        if let Some(val) = ret.next() {
-            if let Some(num) = val.bulk_to_i64() {
-                self.comment_count = num;
             }
         }
         if let Some(val) = ret.next() {

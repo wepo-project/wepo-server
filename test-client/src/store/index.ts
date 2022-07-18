@@ -1,4 +1,5 @@
 import { createStore } from "vuex";
+import { UserData } from "../data";
 
 export default createStore({
     state() {
@@ -8,7 +9,9 @@ export default createStore({
     },
     mutations: {
         changeUser(state, payload) {
-            state.user = payload;
+            if (payload && Object.keys(payload).length) {
+                state.user = payload;
+            }
         }
     }
 })
