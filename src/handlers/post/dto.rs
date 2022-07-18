@@ -32,5 +32,5 @@ pub struct GetPostDTO {
 #[derive(Deserialize, Serialize)]
 pub struct CommentPostDTO {
     pub content: String,
-    pub origin_id: String,
+    pub origin_id: BigInt,
 }

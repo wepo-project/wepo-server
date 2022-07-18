@@ -9,9 +9,9 @@ mod traits;
 
 use crate::config::WepoConfig;
 use crate::{
-    handlers::user::handler as UserHandler,
-    handlers::post::handler as PostHandler,
-    handlers::msg::handler as MsgHandler,
+    handlers::UserHandler,
+    handlers::PostHandler,
+    handlers::MsgHandler,
 };
 use ::config::Config;
 use actix_cors::Cors;

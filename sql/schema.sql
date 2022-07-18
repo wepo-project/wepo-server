@@ -68,10 +68,10 @@ CREATE TABLE IF NOT EXISTS main.notices
     -- 创建时间
     create_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- 是否已读
-    read boolean NOT NULL DEFAULT FASLE,
+    read boolean NOT NULL DEFAULT FALSE,
     -- 主键约束
     CONSTRAINT notices_pkey PRIMARY KEY (notice_id)
-)
+);
 
 -- 好友关系表
 CREATE TABLE IF NOT EXISTS main.friendship

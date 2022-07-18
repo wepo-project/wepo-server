@@ -91,6 +91,9 @@ pub async fn comment(
 ) -> Result<HttpResponse, MyError> {
     let post_id = db::post::comment(&user, &body, &client).await?;
     info!("New Comment:{}", post_id);
+    // 评论成功，发送通知
+    // MsgService::send_notice_to_user(user_id, notice_type);
+
     let result = AddPostResultDTO {
         id: post_id.to_string(),
     };

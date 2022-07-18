@@ -215,10 +215,9 @@ pub async fn comment(
     let _stmt = include_str!("../../sql/post/comment.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
     let post_id = get_next_id()?;
-    let origin_id: i64 = utils::string_to_i64(&data.origin_id);
     
     client
-        .query(&stmt, &[&post_id, &user.id, &data.content, &origin_id])
+        .query(&stmt, &[&post_id, &user.id, &data.content, &data.origin_id])
         .await?
         .iter()
         .map(|row| row.get("id"))
