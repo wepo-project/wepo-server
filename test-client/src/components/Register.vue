@@ -33,7 +33,7 @@ async function onRegister() {
     </div>
     <div class="flex w-full">
       <div class="flex-auto btn btn-green mr-1 text-center" @click="onRegister">Register</div>
-      <router-link class="flex-shrink btn btn-main ml-1 text-center border" to="/reg">Login</router-link>
+      <router-link class="flex-shrink btn btn-main ml-1 text-center border" to="/login">Login</router-link>
     </div>
   </div>
 </template>

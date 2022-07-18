@@ -89,7 +89,7 @@ const deletePost = async () => {
           <div class="text-sm text-gray-500">{{ new Date(item!.create_time).toLocaleString() }}</div>
         </div>
       </div>
-      <div class="mb-2 text-base dark-white">{{ item!.content }}</div>
+      <div class="mb-2 text-base dark-white whitespace-pre-line">{{ item!.content }}</div>
       <template v-if="item!.origin_id">
         <div class="cursor-pointer border border-gray-400 rounded-md p-2 mb-2" @click.stop="onOrigin(item!.origin_id!)">
           <div class="text-sm text-gray-400 mb-1">Origin</div>
