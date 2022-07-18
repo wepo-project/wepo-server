@@ -30,7 +30,7 @@ pub enum MyError {
 }
 
 impl MyError {
-    pub fn code(code: i32) -> Self {
+    pub fn err_code(code: i32) -> Self {
         MyError::OkError(code)
     }
 }

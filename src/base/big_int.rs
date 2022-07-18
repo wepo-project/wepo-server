@@ -12,9 +12,6 @@ impl BigInt {
     pub fn new(num: i64) -> Self {
         Self(num)
     }
-    // pub fn optional(num: Option<i64>) -> Option<Self> {
-    //     num.map(|num| Self::new(num))
-    // }
     pub fn inner(&self) -> &i64 {
         &self.0
     }

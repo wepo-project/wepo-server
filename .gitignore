@@ -2,3 +2,5 @@
 .env
 # redis 服务器临时文件
 dump.rdb
+
+.DS_store

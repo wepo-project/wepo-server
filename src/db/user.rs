@@ -27,7 +27,7 @@ pub async fn add(client: &Client, mut user_info: RegisterUserDTO) -> Result<User
             if let Some(state) = e.code() {
                 match state {
                     // 名字重复
-                    &SqlState::UNIQUE_VIOLATION => MyError::code(201),
+                    &SqlState::UNIQUE_VIOLATION => MyError::err_code(201),
                     _ => MyError::PGError(e),
                 }
             } else {
@@ -38,24 +38,23 @@ pub async fn add(client: &Client, mut user_info: RegisterUserDTO) -> Result<User
         .map(|row| UserData::new(&row.get("id"), &row.get("nick"), None))
         .collect::<Vec<UserData>>()
         .pop()
-        .ok_or(MyError::code(202))
+        .ok_or(MyError::err_code(202))
 }
 
 /// 随机生成盐，长度为30
-pub(crate) fn create_salt() -> String {
+pub fn create_salt() -> String {
     utils::get_random_string(30)
 }
 
 /// 密码加密
 /// sha256(sha256(pwd) + salt)
-pub(crate) fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
+pub fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
     sha256::digest(format!("{}{}", sha256::digest(pwd), salt))
 }
 
 /// 验证用户
-pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<UserData, MyError> {
-    let _stmt = include_str!("../../sql/user/get_user.sql");
-    // let _stmt = _stmt.replace("$table_fields", &User::sql_table_fields());
+pub async fn validate_user(client: &Client, user_info: LoginUserDTO, from_token: bool) -> Result<UserData, MyError> {
+    let _stmt = include_str!("../../sql/user/get_user_from_nick.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 
     let user = client
@@ -67,6 +66,10 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<U
         .pop()
         .ok_or(MyError::FailResultError)?; // 没有该用户
 
+    if from_token {
+        return Ok(user.to_user_data());
+    }
+
     if let Some(_pwd) = &user.pwd {
         if let Some(_raw_pwd) = &user_info.pwd {
             let _enc_pwd = pwd_encrypt(_raw_pwd, &user._salt);
@@ -75,11 +78,11 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO) -> Result<U
                 Ok(user.to_user_data())
             } else {
                 // 密码不相同202
-                Err(MyError::code(202))
+                Err(MyError::err_code(202))
             }
         } else {
             // 没输入密码201
-            Err(MyError::code(201))
+            Err(MyError::err_code(201))
         }
     } else {
         // 不用密码

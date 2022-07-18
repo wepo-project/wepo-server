@@ -2,7 +2,7 @@
 
 // use crate::errors::MyError;
 
-// pub(crate) trait DBPoolGetter {
+// pub trait DBPoolGetter {
 //     fn get_client(&self) -> Result<Client, MyError>;
 // }
 

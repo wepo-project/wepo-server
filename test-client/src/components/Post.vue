@@ -5,6 +5,8 @@ import Heart from "../svg/heart.vue";
 import Comment from "../svg/comment.vue";
 import Hate from "../svg/Hate.vue";
 import { useRouter } from "vue-router";
+import { PostModel } from "../data";
+import store from "../store";
 
 const router = useRouter();
 
@@ -23,10 +25,10 @@ const state = reactive({
   hate_count: props.item?.hate_count ?? 0,
   hated: props.item?.hated ?? false,
   comment_count: props.item?.comment_count ?? 0,
+  is_me: props.item?.sender.id == store.state.user?.id, // 是我自己发送的
 })
 
 const check_details = async () => {
-  console.log(`check_details ${id}`)
   router.push({
     name: 'po',
     params: { id },
@@ -81,7 +83,7 @@ const deletePost = async () => {
 
 <template>
   <template v-if="item!=null">
-    <div @click="check_details" class="p-2 border-b">
+    <div @click="check_details" class="p-2 border-b group">
       <div class="flex pb-2">
         <img class="avatar rounded" :src="item!.sender.avatar_url" alt="avatar"/>
         <div class="flex flex-col ml-2">
@@ -103,14 +105,16 @@ const deletePost = async () => {
           <div class="dark-white text-sm">{{item!.origin_content!}}</div>
         </div>
       </template>
-      <div class="flex" @click.stop="void">
+      <div class="flex items-center h-8" @click.stop="void">
         <Heart v-bind:liked="state.liked" @click="like"/>
         <div class="ml-1 mr-2 dark-white select-none">{{state.like_count}}</div>
         <Comment/>
         <div class="ml-1 mr-2 dark-white select-none">{{state.comment_count}}</div>
         <Hate v-bind:hated="state.hated" @click="hate"/>
         <div class="ml-1 mr-2 dark-white select-none">{{state.hate_count}}</div>
-        <div v-if="showDelete" class="ml-auto hover:underline" @click.stop="deletePost">Delete</div>
+        <div v-if="showDelete && state.is_me"
+          class="ml-auto text-stone-400 cursor-pointer border border-transparent px-2 rounded-md hidden group-hover:block hover:border-gray-100 hover:shadow-md hover:text-red-500"
+          @click.stop="deletePost">DELETE</div>
       </div>
     </div>
   </template>
