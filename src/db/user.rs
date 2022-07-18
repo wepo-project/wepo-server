@@ -1,13 +1,13 @@
 use crate::{
-    data_models::{User, UserData},
+    data_models::user::{User, UserData},
     errors::MyError,
     handlers::user::dto::{LoginUserDTO, RegisterUserDTO},
     utils,
 };
 use deadpool_postgres::Client;
 use log::info;
-use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_postgres::error::SqlState;
+use tokio_pg_mapper_derive::PostgresMapper;
 
 /// 数据库添加用户
 pub async fn add(client: &Client, mut user_info: RegisterUserDTO) -> Result<UserData, MyError> {
@@ -61,7 +61,7 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO, from_token:
         .query(&stmt, &[&user_info.nick])
         .await?
         .iter()
-        .map(|row| User::from_row_ref(row).unwrap())
+        .map(|row| User::from(row))
         .collect::<Vec<User>>()
         .pop()
         .ok_or(MyError::FailResultError)?; // 没有该用户

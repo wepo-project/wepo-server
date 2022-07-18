@@ -11,7 +11,7 @@ use snowflake::SnowflakeIdBucket;
 
 use crate::{
     base::{redis_key::RedisKey, user_info::UserInfo},
-    data_models::{PostExtends, PostExtendsWithComment},
+    data_models::post_extend::{PostExtends, PostExtendsWithComment},
     errors::MyError,
     handlers::post::dto::*,
     traits::sync_cache::SyncCache,

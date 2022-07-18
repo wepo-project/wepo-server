@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::data_models::UserData;
+use crate::data_models::user::UserData;
 
 #[derive(Deserialize, Serialize)]
 pub struct RegisterUserDTO {
@@ -25,8 +25,6 @@ pub struct LoginUserDTO {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LoginResultDTO {
-    // pub id: i32,
-    // pub nick: String,
     pub user: UserData,
     pub token: String,
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{data_models::PostExtends, base::big_int::BigInt};
+use crate::{base::big_int::BigInt};
 
 #[derive(Deserialize, Serialize)]
 pub struct AddPostDTO {

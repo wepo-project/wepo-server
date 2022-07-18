@@ -14,6 +14,19 @@ pub struct User {
     pub create_time: NaiveDate,
 }
 
+impl From<&Row> for User {
+    fn from(row: &Row) -> Self {
+        Self {
+            id: row.get("id"),
+            nick: row.get("nick"),
+            pwd: row.get("pwd"),
+            _salt: row.get("_salt"),
+            avatar_url: row.get("avatar_url"),
+            create_time: row.get("create_time"),
+        }
+    }
+}
+
 impl User {
     pub fn get_avatar_url(nick: &String) -> String {
         format!(
