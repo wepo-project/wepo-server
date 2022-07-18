@@ -13,7 +13,7 @@ use crate::{
     base::{redis_key::RedisKey, user_info::UserInfo},
     data_models::{PostExtends, PostExtendsWithComment},
     errors::MyError,
-    models::post::dto::*,
+    handlers::post::dto::*,
     traits::sync_cache::SyncCache,
     utils::{
         self,

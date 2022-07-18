@@ -1,6 +1,6 @@
 use crate::{
-    base::user_info::UserInfo, db, errors::MyError,
-    models::user::auth as AuthHandler, models::user::dto::*,
+    base::{user_info::UserInfo, pg_client::PGClient, paging_data::PagingDataBuilder}, db, errors::MyError,
+    handlers::user::auth as AuthHandler, handlers::user::dto::*,
 };
 
 use actix_web::{web, Error, HttpResponse};
@@ -10,9 +10,8 @@ use log::info;
 /// 用户注册
 pub async fn register(
     user_info: web::Json<RegisterUserDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     if user_info.nick.is_empty() {
         return Err(MyError::err_code(301));
     }
@@ -28,12 +27,10 @@ pub async fn register(
 /// 用户登录
 pub async fn login(
     user: web::Json<LoginUserDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
     // redis: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let user_info: LoginUserDTO = user.into_inner();
-
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
 
     let user = db::user::validate_user(&client, user_info, false).await?;
 
@@ -52,9 +49,8 @@ pub async fn login(
 /// 用token登录
 pub async fn login_with_token(
     user: UserInfo,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let user = db::user::validate_user(
         &client,
         LoginUserDTO {
@@ -76,10 +72,9 @@ pub async fn login_with_token(
 pub async fn change_nick(
     user: UserInfo,
     data: web::Json<ChangeNickDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
 ) -> Result<HttpResponse, MyError> {
     let mut data = data.into_inner();
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let nick = db::user::change_nick(&client, &user.id, &data.nick).await?;
     data.nick = nick;
     Ok(HttpResponse::Ok().json(data))
@@ -87,17 +82,13 @@ pub async fn change_nick(
 
 /// 搜索用户
 pub async fn search_user(
-    data: web::Json<SearchUserDTO>,
-    db_pool: web::Data<Pool>,
+    body: web::Json<SearchUserDTO>,
+    client: PGClient,
 ) -> Result<HttpResponse, MyError> {
     /// 每页的数量
     const COUNT_PER_PAGE: i64 = 20;
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
-    let list = db::user::search_user(&client, &data.nick, &data.page, &COUNT_PER_PAGE).await?;
-    let next = list.len() >= COUNT_PER_PAGE as usize;
-    Ok(HttpResponse::Ok().json(SearchUserResultDTO {
-        page: data.page,
-        next,
-        list,
-    }))
+    Ok(HttpResponse::Ok().json(
+        PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
+        .set_list(db::user::search_user(&client, &body.nick, &body.page, &COUNT_PER_PAGE).await?)
+    ))
 }

@@ -1,7 +1,7 @@
 use crate::{
     data_models::{User, UserData},
     errors::MyError,
-    models::user::dto::{LoginUserDTO, RegisterUserDTO},
+    handlers::user::dto::{LoginUserDTO, RegisterUserDTO},
     utils,
 };
 use deadpool_postgres::Client;

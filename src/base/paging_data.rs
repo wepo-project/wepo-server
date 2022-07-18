@@ -15,7 +15,9 @@ impl<T: Serialize> PagingData<T> {
 }
 
 pub struct PagingDataBuilder<'a> {
+    /// 每页个数
     limit: &'static i64,
+    /// 当前页数
     page: &'a i64,
 }
 
@@ -31,6 +33,7 @@ impl<'a> PagingDataBuilder<'a> {
 
 
 #[derive(Deserialize, Serialize)]
+/// 通用分页请求
 pub struct GetPageDTO {
     pub page: i64,
 }

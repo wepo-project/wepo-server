@@ -14,6 +14,7 @@ use crate::base::resp::ResultResponse;
 #[derive(Display, From, Debug)]
 pub enum MyError {
     NotFound,
+    InternalServerError,
     JWTTokenCreationError,
     FailResultError,
     JWTTokenError,

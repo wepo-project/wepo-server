@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display, num::ParseIntError};
+use std::{error::Error, fmt::Display, num::ParseIntError, ops::Deref};
 
 use serde::{Serialize, Deserialize, de::Visitor};
 use tokio_postgres::types::{ToSql, Type, to_sql_checked, accepts, FromSql, IsNull};
@@ -104,4 +104,12 @@ impl<'a> FromSql<'a> for BigInt {
     }
 
     accepts!(INT8);
+}
+
+impl Deref for BigInt {
+    type Target = i64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }

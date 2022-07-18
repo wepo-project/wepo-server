@@ -1,7 +1,7 @@
 use actix::fut;
 use actix_web::FromRequest;
 
-use crate::{models::user::auth::validate_token, errors::MyError};
+use crate::{handlers::user::auth::validate_token, errors::MyError};
 
 #[derive(Debug, Clone)]
 pub struct UserInfo {

@@ -43,10 +43,3 @@ pub struct SearchUserDTO {
     pub nick: String,
     pub page: i64,
 }
-
-#[derive(Deserialize, Serialize)]
-pub struct SearchUserResultDTO {
-    pub page: i64,
-    pub next: bool,
-    pub list: Vec<UserData>,
-}

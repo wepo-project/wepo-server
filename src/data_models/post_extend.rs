@@ -1,84 +1,17 @@
 use actix::Addr;
 use actix_redis::{RedisActor, RespValue};
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-// use tokio_postgres::row::Row;
-// use uuid::Uuid;
 use async_trait::async_trait;
-use tokio_pg_mapper_derive::PostgresMapper;
 use tokio_postgres::Row;
 
 use crate::{
     base::{big_int::BigInt, redis_key::RedisKey, user_info::UserInfo},
+    data_models::user::*,
     errors::MyError,
     traits::sync_cache::SyncCache,
     utils::db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper},
 };
-
-#[derive(Debug, Deserialize, Serialize, PostgresMapper)]
-#[pg_mapper(table = "users")]
-pub struct User {
-    pub id: i32,
-    pub nick: String,
-    pub pwd: Option<String>,
-    pub _salt: String,
-    pub avatar_url: Option<String>, // https://avatars.dicebear.com/api/pixel-art-neutral/123.svg
-    pub create_time: NaiveDate,
-}
-
-impl User {
-    pub fn get_avatar_url(nick: &String) -> String {
-        format!(
-            "https://avatars.dicebear.com/api/{}/{}.svg",
-            "pixel-art-neutral", nick
-        )
-    }
-    pub fn to_user_data(&self) -> UserData {
-        UserData::new(&self.id, &self.nick, self.avatar_url.clone())
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct UserData {
-    pub id: i32,
-    pub nick: String,
-    pub avatar_url: String,
-}
-
-impl UserData {
-    pub fn new(id: &i32, nick: &String, avatar_url: Option<String>) -> Self {
-        let avatar_url = avatar_url.unwrap_or(
-            User::get_avatar_url(&nick)
-        );
-        Self {
-            id: *id,
-            nick: nick.clone(),
-            avatar_url,
-        }
-    }
-    pub fn optional(
-        id: &Option<i32>,
-        nick: &Option<String>,
-        avatar_url: Option<String>,
-    ) -> Option<Self> {
-        if let Some(id) = id {
-            if let Some(nick) = nick {
-                return Some(Self::new(id, nick, avatar_url));
-            }
-        }
-        None
-    }
-}
-
-impl From<&Row> for UserData {
-    fn from(row: &Row) -> Self {
-        UserData::new(
-            &row.get("id"),
-            &row.get("nick"),
-            row.try_get("avatar_url").ok(),
-        )
-    }
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PostExtends {
@@ -218,3 +151,5 @@ impl PostExtendsWithComment {
         MAX_COMMENTS
     }
 }
+
+

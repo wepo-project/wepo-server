@@ -3,14 +3,14 @@ mod config;
 mod data_models;
 mod db;
 mod errors;
-mod models;
+mod handlers;
 mod utils;
 mod traits;
 
 use crate::config::WepoConfig;
 use crate::{
-    models::user::handler as UserHandler,
-    models::post::handler as PostHandler,
+    handlers::user::handler as UserHandler,
+    handlers::post::handler as PostHandler,
 };
 use ::config::Config;
 use actix_cors::Cors;

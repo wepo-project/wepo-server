@@ -8,11 +8,11 @@ use crate::{
     base::{
         paging_data::{PagingData, PagingDataBuilder, GetPageDTO},
         resp::ResultResponse,
-        user_info::UserInfo,
+        user_info::UserInfo, pg_client::PGClient,
     },
     db,
     errors::MyError,
-    models::post::dto::*,
+    handlers::post::dto::*,
 };
 
 use super::dto::DelPostDTO;
@@ -20,9 +20,8 @@ use super::dto::DelPostDTO;
 pub async fn add(
     user: UserInfo,
     post_body: web::Json<AddPostDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let post_id = db::post::add(&user, &post_body, &client).await?;
     info!("New Post:{}", post_id);
     let result = AddPostResultDTO {
@@ -35,10 +34,9 @@ pub async fn add(
 pub async fn delete(
     user: UserInfo,
     del_body: web::Json<DelPostDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let _ = db::post::delete(&user, &del_body, &client, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
@@ -47,10 +45,9 @@ pub async fn delete(
 pub async fn get_one(
     user: UserInfo,
     body: web::Query<GetPostDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let post = db::post::get_one(&user, &body.id, &client, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(post))
 }
@@ -79,12 +76,11 @@ pub async fn cancel_like(
 pub async fn mine(
     user: UserInfo,
     body: web::Json<GetPageDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     /// 每页的数量
     const COUNT_PER_PAGE: i64 = 20;
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
 
     Ok(HttpResponse::Ok().json(
         PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
@@ -96,9 +92,8 @@ pub async fn mine(
 pub async fn comment(
     user: UserInfo,
     body: web::Json<CommentPostDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     let post_id = db::post::comment(&user, &body, &client).await?;
     info!("New Comment:{}", post_id);
     let result = AddPostResultDTO {
@@ -131,12 +126,11 @@ pub async fn cancel_hate(
 pub async fn browse(
     user: UserInfo,
     body: web::Query<GetPageDTO>,
-    db_pool: web::Data<Pool>,
+    client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<impl Responder, Error> {
     /// 每页的数量
     const COUNT_PER_PAGE: i64 = 20;
-    let client: Client = db_pool.get().await.map_err(MyError::PoolError)?;
     Ok(HttpResponse::Ok().json(
         PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
         .set_list(db::post::browse(&user, &client, &body.page, &COUNT_PER_PAGE, &redis_addr).await?)
