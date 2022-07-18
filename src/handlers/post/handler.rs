@@ -1,12 +1,11 @@
 use actix::Addr;
 use actix_redis::RedisActor;
 use actix_web::{web, Error, HttpResponse, Responder};
-use deadpool_postgres::{Client, Pool};
 use log::info;
 
 use crate::{
     base::{
-        paging_data::{PagingData, PagingDataBuilder, GetPageDTO},
+        paging_data::{Paging, GetPageDTO},
         resp::ResultResponse,
         user_info::UserInfo, pg_client::PGClient,
     },
@@ -79,13 +78,9 @@ pub async fn mine(
     client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
-    /// 每页的数量
-    const COUNT_PER_PAGE: i64 = 20;
-
-    Ok(HttpResponse::Ok().json(
-        PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
-        .set_list(db::post::get_mine(&user, &body.page, &COUNT_PER_PAGE, &client, &redis_addr).await?)
-    ))
+    let paging = Paging::default(&body.page);
+    let list = db::post::get_mine(&user, &paging, &client, &redis_addr).await?;
+    paging.finish(list)
 }
 
 /// 评论
@@ -129,10 +124,7 @@ pub async fn browse(
     client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<impl Responder, Error> {
-    /// 每页的数量
-    const COUNT_PER_PAGE: i64 = 20;
-    Ok(HttpResponse::Ok().json(
-        PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
-        .set_list(db::post::browse(&user, &client, &body.page, &COUNT_PER_PAGE, &redis_addr).await?)
-    ))
+    let paging = Paging::default(&body.page);
+    let list = db::post::browse(&user, &client, &paging, &redis_addr).await?;
+    paging.finish(list)
 }

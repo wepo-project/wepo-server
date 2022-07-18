@@ -11,6 +11,7 @@ use crate::config::WepoConfig;
 use crate::{
     handlers::user::handler as UserHandler,
     handlers::post::handler as PostHandler,
+    handlers::msg::handler as MsgHandler,
 };
 use ::config::Config;
 use actix_cors::Cors;
@@ -72,7 +73,11 @@ async fn main() -> std::io::Result<()> {
                             .route("/my_post", post().to(PostHandler::mine)) // 获取我的（翻页）
                             .route("/comment", post().to(PostHandler::comment)) // 评论
                             .route("/browse", get().to(PostHandler::browse)) // 浏览所有（翻页）
-                    ),
+                    )
+                    .service(
+                        web::scope("/msg")
+                        .route("/notices", post().to(MsgHandler::get_notices)), // 获取通知
+                    )
             )
     })
     .bind(config.server_addr.clone())?

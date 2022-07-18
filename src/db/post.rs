@@ -10,7 +10,7 @@ use serde::Serialize;
 use snowflake::SnowflakeIdBucket;
 
 use crate::{
-    base::{redis_key::RedisKey, user_info::UserInfo},
+    base::{redis_key::RedisKey, user_info::UserInfo, paging_data::Paging},
     data_models::post_extend::{PostExtends, PostExtendsWithComment},
     errors::MyError,
     handlers::post::dto::*,
@@ -187,17 +187,15 @@ pub async fn cancel_like(
 }
 
 /// 查看我的post
-pub async fn get_mine(
+pub async fn get_mine<'a>(
     user: &UserInfo,
-    page: &i64,
-    limit: &i64,
+    paging: &Paging<'a>,
     client: &Client,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {
     let _stmt = include_str!("../../sql/post/get_list.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
-    let offset = limit * (page - 1);
-    let vec = client.query(&stmt, &[&user.id, &limit, &offset]).await?;
+    let vec = client.query(&stmt, &[&user.id, paging.limit(), paging.offset()]).await?;
 
     Ok(join_all(vec.iter().map(|row| async move {
         // move 把row引用带出闭包
@@ -285,17 +283,15 @@ pub async fn cancel_hate(
 }
 
 /// 浏览
-pub async fn browse(
+pub async fn browse<'a>(
     user: &UserInfo,
     client: &Client,
-    page: &i64,
-    limit: &i64,
+    paging: &Paging<'a>,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {
     let _stmt = include_str!("../../sql/post/browse.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
-    let _offset = limit * (page - 1);
-    let vec = client.query(&stmt, &[limit, &_offset]).await?;
+    let vec = client.query(&stmt, &[paging.limit(), paging.offset()]).await?;
 
     Ok(join_all(vec.iter().map(|row| async move {
         let mut post = PostExtends::from(row);

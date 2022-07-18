@@ -2,12 +2,11 @@ use crate::{
     data_models::user::{User, UserData},
     errors::MyError,
     handlers::user::dto::{LoginUserDTO, RegisterUserDTO},
-    utils,
+    utils, base::paging_data::Paging,
 };
 use deadpool_postgres::Client;
 use log::info;
 use tokio_postgres::error::SqlState;
-use tokio_pg_mapper_derive::PostgresMapper;
 
 /// 数据库添加用户
 pub async fn add(client: &Client, mut user_info: RegisterUserDTO) -> Result<UserData, MyError> {
@@ -105,12 +104,11 @@ pub async fn change_nick(client: &Client, id: &i32, nick: &String) -> Result<Str
 }
 
 /// 搜索用户
-pub async fn search_user(client: &Client, nick: &String, page: &i64, limit: &i64) -> Result<Vec<UserData>, MyError> {
+pub async fn search_user<'a>(client: &Client, nick: &String, paging: &Paging<'a>) -> Result<Vec<UserData>, MyError> {
     let _stmt = include_str!("../../sql/user/search_user.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
-    let _offset: i64 = limit * (page - 1);
     Ok(client
-        .query(&stmt, &[&format!("%{}%", nick), limit, &_offset])
+        .query(&stmt, &[&format!("%{}%", nick), paging.limit(), paging.offset()])
         .await?
         .iter()
         .map(|row| UserData::from(row))

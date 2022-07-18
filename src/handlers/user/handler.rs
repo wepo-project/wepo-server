@@ -1,10 +1,9 @@
 use crate::{
-    base::{user_info::UserInfo, pg_client::PGClient, paging_data::PagingDataBuilder}, db, errors::MyError,
+    base::{user_info::UserInfo, pg_client::PGClient, paging_data::Paging}, db, errors::MyError,
     handlers::user::auth as AuthHandler, handlers::user::dto::*,
 };
 
 use actix_web::{web, Error, HttpResponse};
-use deadpool_postgres::{Client, Pool};
 use log::info;
 
 /// 用户注册
@@ -85,10 +84,7 @@ pub async fn search_user(
     body: web::Json<SearchUserDTO>,
     client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    /// 每页的数量
-    const COUNT_PER_PAGE: i64 = 20;
-    Ok(HttpResponse::Ok().json(
-        PagingDataBuilder::new(&COUNT_PER_PAGE, &body.page)
-        .set_list(db::user::search_user(&client, &body.nick, &body.page, &COUNT_PER_PAGE).await?)
-    ))
+    let paging = Paging::default(&body.page);
+    let list = db::user::search_user(&client, &body.nick, &paging).await?;
+    paging.finish(list)
 }

@@ -1,10 +1,14 @@
 import { createStore } from "vuex";
 import { UserData } from "../data";
 
-export default createStore({
+interface MyStore {
+    user: UserData | null
+}
+
+const store = createStore<MyStore>({
     state() {
         return {
-            user: null as (UserData | null), 
+            user: null, 
         }
     },
     mutations: {
@@ -15,3 +19,5 @@ export default createStore({
         }
     }
 })
+
+export default store;
