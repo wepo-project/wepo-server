@@ -47,7 +47,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA main to ww;
 ### 5. 创建 `.env` 文件
 
 ```ini
-SERVER_ADDR=127.0.0.1:8080
+SERVER_ADDR=0.0.0.0:8080
 REDIS_ADDR=127.0.0.1:6379
 PG.USER=ww
 PG.PASSWORD=ww
@@ -67,14 +67,4 @@ cargo run
 
 ```sh
 cargo watch -x 'run'
-```
-
-### 7. 运行客户端（精简测试版）
-
-```sh
-cd test-client
-# 安装依赖 或者使用npm、pnpm
-yarn install
-# 运行
-yarn dev
 ```
