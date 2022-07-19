@@ -51,6 +51,9 @@ pub fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
 }
 
 /// 验证用户
+/// 203 没有该用户
+/// 202 密码错误
+/// 201 没输入密码
 pub async fn validate_user(client: &PGClient, user_info: LoginUserDTO, from_token: bool) -> Result<UserData, MyError> {
     let _stmt = include_str!("../../sql/user/get_user_from_nick.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
@@ -62,7 +65,7 @@ pub async fn validate_user(client: &PGClient, user_info: LoginUserDTO, from_toke
         .map(|row| User::from(row))
         .collect::<Vec<User>>()
         .pop()
-        .ok_or(MyError::FailResultError)?; // 没有该用户
+        .ok_or(MyError::err_code(203))?; // 没有该用户
 
     if from_token {
         return Ok(user.to_user_data());

@@ -34,7 +34,7 @@ impl FromRequest for UserInfo {
                         Err(e) => Err(e)
                     }
                 }
-                None => Err(MyError::AuthorizationNotFound),
+                None => Err(MyError::JWTTokenError),
             }
         })
     }

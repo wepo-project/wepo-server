@@ -9,6 +9,7 @@ import PostDetail from "./components/PostDetail.vue";
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
+        name: "home",
         component: Home,
     },
     {
@@ -18,14 +19,17 @@ const routes: RouteRecordRaw[] = [
     },
     {
         path: '/reg',
+        name: "reg",
         component: Register,
     },
     {
         path: '/send',
+        name: "send",
         component: SendPost,
     },
     {
         path: '/my_post',
+        name: "my_post",
         component: MyPost,
     },
     {

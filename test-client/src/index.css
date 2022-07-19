@@ -23,7 +23,7 @@
         @apply bg-blue-700;
     }
     .input {
-        @apply border rounded-sm dark:bg-[#1d1e21] dark:border-blue-100;
+        @apply border rounded-sm dark:bg-[#1d1e21] dark:border-blue-100 dark:text-white;
     }
     
     .dark-white {

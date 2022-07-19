@@ -30,7 +30,7 @@ client.waitingQueue = [];
 const Authorization = "Authorization";
 
 const axiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:8080/v1",
+  baseURL: import.meta.env.VITE_HOST,
 });
 
 const fontStyle = {
@@ -131,7 +131,10 @@ client.loginWithAccount = async (
   pwd: string
 ): Promise<boolean> =>
   wrapLoginCall(() => client.post('user', 'login', {
-    data: { nick, pwd }
+    data: { nick, pwd },
+    headers: {
+      [Authorization]: "Bearer 123"
+    }
   }));
 
 /**
@@ -164,6 +167,12 @@ const wrapLoginCall = async (
     client.isLoging = false
     let token = resp.data["token"];
     let user = resp.data["user"];
+    if (!token || !user) {
+      if (client.waitingQueue.length) {
+        client.waitingQueue = [];
+      }
+      return false;
+    }
     let result = saveToken(token);
     store.commit('changeUser', user);
     

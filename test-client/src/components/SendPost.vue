@@ -21,6 +21,6 @@ async function onSend() {
 <template>
   <div class="py-2 px-3">
     <textarea v-model="content" class="w-full h-20 p-2 border rounded-sm"></textarea>
-      <div class="btn btn-blue w-fit mt-2" @click="onSend">Send</div>
+    <div class="btn btn-blue w-fit mt-2" @click="onSend">Send</div>
   </div>
 </template>

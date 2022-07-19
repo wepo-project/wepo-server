@@ -1,20 +1,24 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-import { reactive } from 'vue';
-
+import { RouterLink, useRoute } from 'vue-router';
+import { reactive, watch } from 'vue';
+const route = useRoute();
+const tabs = [
+    { name: "home", title: "HOME" },
+    { name: "send", title: "SEND" },
+    { name: "my_post", title: "ME" },
+];
+const getIndex = () => tabs.findIndex((e) => route.name == e.name)
 const state = reactive({
-    tabs: [
-        { to: "/", name: "HOME" },
-        { to: "/send", name: "SEND" },
-        { to: "/my_post", name: "ME" },
-    ]
+    currTab: getIndex(),
 })
-
+watch(route, () => {
+    state.currTab = getIndex()
+})
 </script>
 <template>
     <ul class="flex flex-row flex-wrap list-none border-b-0 pl-0">
-        <li v-for="(item) in state.tabs" class="flex-auto flex items-center justify-center" role="presentation">
-            <router-link :to="item.to" class="
+        <li v-for="(item, index) in tabs" class="flex-auto flex items-center justify-center" role="presentation">
+            <router-link :to="{ name: item.name }" class="
             w-full
             block
             font-medium
@@ -30,7 +34,7 @@ const state = reactive({
             focus:border-transparent
             dark:hover:bg-[#48484f]
             active
-            ">{{item.name}}</router-link>
+            " :class="state.currTab==index?'bg-gray-100 dark:bg-[#48484f]':''">{{item.title}}</router-link>
         </li>
     </ul>
 </template>
