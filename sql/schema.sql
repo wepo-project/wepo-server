@@ -58,19 +58,21 @@ CREATE TABLE IF NOT EXISTS main.posts
 CREATE TABLE IF NOT EXISTS main.notices
 (
     -- id
-    notice_id uuid NOT NULL DEFAULT gen_random_uuid(),
+    id bigserial NOT NULL,
+    -- 发送者
+    sender integer NOT NULL,
+    -- 通知类型
+    notice_type smallint NOT NULL,
+    -- 通知主体的id ， 如果是评论，则为评论id
+    sender_obj_id text NOT NULL,
     -- 接收者
     addressee_id integer NOT NULL REFERENCES main.users(id) ON DELETE CASCADE,
-    -- 类型
-    notice_type character(1) NOT NULL,
-    -- 各个参数
-    args text[] NOT NULL,
     -- 创建时间
     create_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- 是否已读
     read boolean NOT NULL DEFAULT FALSE,
     -- 主键约束
-    CONSTRAINT notices_pkey PRIMARY KEY (notice_id)
+    CONSTRAINT notices_pkey PRIMARY KEY (id)
 );
 
 -- 好友关系表

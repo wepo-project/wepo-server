@@ -11,7 +11,8 @@ use crate::{
     },
     db,
     errors::MyError,
-    handlers::post::dto::*,
+    handlers::{PostDTO::*},
+    handlers::MsgService,
 };
 
 use super::dto::DelPostDTO;
@@ -24,7 +25,7 @@ pub async fn add(
     let post_id = db::post::add(&user, &post_body, &client).await?;
     info!("New Post:{}", post_id);
     let result = AddPostResultDTO {
-        id: post_id.to_string(),
+        id: post_id,
     };
     Ok(HttpResponse::Ok().json(result))
 }
@@ -89,13 +90,15 @@ pub async fn comment(
     body: web::Json<CommentPostDTO>,
     client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    let post_id = db::post::comment(&user, &body, &client).await?;
-    info!("New Comment:{}", post_id);
-    // 评论成功，发送通知
-    // MsgService::send_notice_to_user(user_id, notice_type);
+    let comment_result = db::post::comment(&user, &body, &client).await?;
+    info!("New Comment:{}", comment_result.id);
+    // 评论成功，发送通知, 如果评论自己就不发送了
+    if user.id != comment_result.receiver {
+        MsgService::send_comment_notice(&user.id, &comment_result.receiver, &comment_result.id, &client).await?;
+    }
 
     let result = AddPostResultDTO {
-        id: post_id.to_string(),
+        id: comment_result.id,
     };
     Ok(HttpResponse::Ok().json(result))
 }

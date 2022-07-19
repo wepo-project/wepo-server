@@ -15,6 +15,7 @@ interface NetClient {
   isLoging: boolean;
   waitingQueue: [DelayResolver, Method, string, string, AxiosRequestConfig?][]
   getWaitingPromise(method: Method, model: string, func: string, config: AxiosRequestConfig | undefined): AxiosPromise;
+  logout(): void;
 }
 
 interface DelayResolver {
@@ -139,7 +140,7 @@ client.loginWithAccount = async (
 client.loginWithToken = async (): Promise<boolean> => {
   const token = getSavedToken();
   if (token) {
-    return wrapLoginCall(() => client.get('user', 'token_login', {
+    return wrapLoginCall(() => client.get('user', 'token_refresh', {
       headers: {
         [Authorization]: token
       }
@@ -150,8 +151,7 @@ client.loginWithToken = async (): Promise<boolean> => {
 
 /**
  * 包装两种登录的方法
- * @param acitonCall 
- * @param tokenExtractor 
+ * @param acitonCall
  * @returns 
  */
 const wrapLoginCall = async (
@@ -188,6 +188,14 @@ const wrapLoginCall = async (
   } finally {
     client.isLoging = false
   }
+}
+
+client.logout = () => {
+  delete axiosInstance.defaults.headers.common[Authorization]
+  localStorage.removeItem('_t');
+  store.commit('logout')
+  router.push('/login')
+  window.location.reload()
 }
 
 (window as any).client = client;

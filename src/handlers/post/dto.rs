@@ -9,7 +9,7 @@ pub struct AddPostDTO {
 
 #[derive(Deserialize, Serialize)]
 pub struct AddPostResultDTO {
-    pub id: String,
+    pub id: BigInt,
 }
 
 #[derive(Deserialize, Serialize)]

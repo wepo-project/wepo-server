@@ -2,14 +2,13 @@ use crate::{
     data_models::user::{User, UserData},
     errors::MyError,
     handlers::user::dto::{LoginUserDTO, RegisterUserDTO},
-    utils, base::paging_data::Paging,
+    utils, base::{paging_data::Paging, pg_client::PGClient},
 };
-use deadpool_postgres::Client;
 use log::info;
 use tokio_postgres::error::SqlState;
 
 /// 数据库添加用户
-pub async fn add(client: &Client, mut user_info: RegisterUserDTO) -> Result<UserData, MyError> {
+pub async fn add(client: &PGClient, mut user_info: RegisterUserDTO) -> Result<UserData, MyError> {
     let _stmt = include_str!("../../sql/user/add_user.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 
@@ -52,7 +51,7 @@ pub fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
 }
 
 /// 验证用户
-pub async fn validate_user(client: &Client, user_info: LoginUserDTO, from_token: bool) -> Result<UserData, MyError> {
+pub async fn validate_user(client: &PGClient, user_info: LoginUserDTO, from_token: bool) -> Result<UserData, MyError> {
     let _stmt = include_str!("../../sql/user/get_user_from_nick.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
 
@@ -90,7 +89,7 @@ pub async fn validate_user(client: &Client, user_info: LoginUserDTO, from_token:
 }
 
 /// 修改昵称
-pub async fn change_nick(client: &Client, id: &i32, nick: &String) -> Result<String, MyError> {
+pub async fn change_nick(client: &PGClient, id: &i32, nick: &String) -> Result<String, MyError> {
     let _stmt = include_str!("../../sql/user/change_nick.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
     client
@@ -104,7 +103,7 @@ pub async fn change_nick(client: &Client, id: &i32, nick: &String) -> Result<Str
 }
 
 /// 搜索用户
-pub async fn search_user<'a>(client: &Client, nick: &String, paging: &Paging<'a>) -> Result<Vec<UserData>, MyError> {
+pub async fn search_user<'a>(client: &PGClient, nick: &String, paging: &Paging<'a>) -> Result<Vec<UserData>, MyError> {
     let _stmt = include_str!("../../sql/user/search_user.sql");
     let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
     Ok(client

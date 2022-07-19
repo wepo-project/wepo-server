@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
                         web::scope("/user")
                             .route("/register", post().to(UserHandler::register)) // 注册
                             .route("/login", post().to(UserHandler::login)) // 账号密码登录
-                            .route("/token_login", get().to(UserHandler::login_with_token)) // token 登录
+                            .route("/token_refresh", get().to(UserHandler::login_with_token)) // token 登录
                             .route("/change_nick", post().to(UserHandler::change_nick)) // 修改昵称
                             .route("/search_user", post().to(UserHandler::search_user)) // 查找用户
                     )
@@ -76,7 +76,7 @@ async fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::scope("/msg")
-                        .route("/notices", post().to(MsgHandler::get_notices)), // 获取通知
+                        .route("/comments", post().to(MsgHandler::get_comments)), // 获取通知
                     )
             )
     })

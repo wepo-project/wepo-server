@@ -1,11 +1,12 @@
 use std::{error::Error, fmt::Display, num::ParseIntError, ops::Deref};
 
+use log::info;
 use serde::{Serialize, Deserialize, de::Visitor};
 use tokio_postgres::types::{ToSql, Type, to_sql_checked, accepts, FromSql, IsNull};
 use actix_web::web::BytesMut;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct BigInt(i64);
 
 impl BigInt {
@@ -99,11 +100,15 @@ impl ToSql for BigInt {
 
 impl<'a> FromSql<'a> for BigInt {
     fn from_sql(ty: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
-        let num = i64::from_sql(ty, raw)?;
+        let num: i64 = match ty {
+            &Type::INT8 => i64::from_sql(ty, raw)?,
+            &Type::TEXT => String::from_sql(ty, raw)?.parse::<i64>()?,
+            _ => unreachable!("accepts type unmatch")
+        };
         Ok(BigInt::new(num))
     }
 
-    accepts!(INT8);
+    accepts!(INT8, TEXT);
 }
 
 impl Deref for BigInt {

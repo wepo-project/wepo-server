@@ -16,6 +16,9 @@ const store = createStore<MyStore>({
             if (payload && Object.keys(payload).length) {
                 state.user = payload;
             }
+        },
+        logout(state, _payload) {
+            state.user = null
         }
     }
 })

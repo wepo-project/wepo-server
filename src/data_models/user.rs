@@ -28,10 +28,10 @@ impl From<&Row> for User {
 }
 
 impl User {
-    pub fn get_avatar_url(nick: &String) -> String {
+    pub fn get_avatar_url(arg: &String) -> String {
         format!(
             "https://avatars.dicebear.com/api/{}/{}.svg",
-            "pixel-art-neutral", nick
+            "pixel-art-neutral", arg
         )
     }
     pub fn to_user_data(&self) -> UserData {
@@ -48,9 +48,7 @@ pub struct UserData {
 
 impl UserData {
     pub fn new(id: &i32, nick: &String, avatar_url: Option<String>) -> Self {
-        let avatar_url = avatar_url.unwrap_or(
-            User::get_avatar_url(&nick)
-        );
+        let avatar_url = avatar_url.unwrap_or(User::get_avatar_url(&nick));
         Self {
             id: *id,
             nick: nick.clone(),
@@ -68,6 +66,13 @@ impl UserData {
             }
         }
         None
+    }
+    pub fn unreference(id: &i32, nick: Option<String>, avatar_url: Option<String>) -> Self {
+        Self::new(
+            &id,
+            &nick.unwrap_or_else(|| id.to_string()),
+            Some(avatar_url.unwrap_or_else(|| User::get_avatar_url(&id.to_string()))),
+        )
     }
 }
 

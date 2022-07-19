@@ -2,7 +2,6 @@ use std::sync::Mutex;
 
 use actix::Addr;
 use actix_redis::RedisActor;
-use deadpool_postgres::Client;
 use futures::future::{join_all, try_join_all};
 use log::info;
 use once_cell::sync::Lazy;
@@ -10,15 +9,12 @@ use serde::Serialize;
 use snowflake::SnowflakeIdBucket;
 
 use crate::{
-    base::{redis_key::RedisKey, user_info::UserInfo, paging_data::Paging},
-    data_models::post_extend::{PostExtends, PostExtendsWithComment},
+    base::{redis_key::RedisKey, user_info::UserInfo, paging_data::Paging, pg_client::PGClient, big_int::BigInt},
+    data_models::post::{PostExtends, PostExtendsWithComment},
     errors::MyError,
-    handlers::post::dto::*,
+    handlers::post::{dto::*, data::CommentResult},
     traits::sync_cache::SyncCache,
-    utils::{
-        self,
-        db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper},
-    },
+    utils::db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper},
 };
 
 /// 雪花id生成器
@@ -33,7 +29,7 @@ fn get_next_id() -> Result<i64, MyError> {
 }
 
 /// 添加
-pub async fn add(user: &UserInfo, post_data: &AddPostDTO, client: &Client) -> Result<i64, MyError> {
+pub async fn add(user: &UserInfo, post_data: &AddPostDTO, client: &PGClient) -> Result<BigInt, MyError> {
     let _stmt = include_str!("../../sql/post/add.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
     let post_id = get_next_id()?;
@@ -42,7 +38,7 @@ pub async fn add(user: &UserInfo, post_data: &AddPostDTO, client: &Client) -> Re
         .await?
         .iter()
         .map(|row| row.get("id"))
-        .collect::<Vec<i64>>()
+        .collect::<Vec<BigInt>>()
         .pop()
         .ok_or(MyError::NotFound)
 }
@@ -52,7 +48,7 @@ pub async fn add(user: &UserInfo, post_data: &AddPostDTO, client: &Client) -> Re
 pub async fn delete(
     user: &UserInfo,
     del_data: &DelPostDTO,
-    client: &Client,
+    client: &PGClient,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<(), MyError> {
     let _stmt = include_str!("../../sql/post/delete.sql");
@@ -81,7 +77,7 @@ pub async fn delete(
 pub async fn get_one(
     user: &UserInfo,
     post_id: &i64,
-    client: &Client,
+    client: &PGClient,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<impl Serialize, MyError> {
     let _stmt = include_str!("../../sql/post/get.sql");
@@ -190,7 +186,7 @@ pub async fn cancel_like(
 pub async fn get_mine<'a>(
     user: &UserInfo,
     paging: &Paging<'a>,
-    client: &Client,
+    client: &PGClient,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {
     let _stmt = include_str!("../../sql/post/get_list.sql");
@@ -210,8 +206,8 @@ pub async fn get_mine<'a>(
 pub async fn comment(
     user: &UserInfo,
     data: &CommentPostDTO,
-    client: &Client,
-) -> Result<i64, MyError> {
+    client: &PGClient,
+) -> Result<CommentResult, MyError> {
     let _stmt = include_str!("../../sql/post/comment.sql");
     let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
     let post_id = get_next_id()?;
@@ -220,8 +216,8 @@ pub async fn comment(
         .query(&stmt, &[&post_id, &user.id, &data.content, &data.origin_id])
         .await?
         .iter()
-        .map(|row| row.get("id"))
-        .collect::<Vec<i64>>()
+        .map(|row| CommentResult::from(row))
+        .collect::<Vec<CommentResult>>()
         .pop()
         .ok_or(MyError::NotFound)
 }
@@ -284,7 +280,7 @@ pub async fn cancel_hate(
 /// 浏览
 pub async fn browse<'a>(
     user: &UserInfo,
-    client: &Client,
+    client: &PGClient,
     paging: &Paging<'a>,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {

@@ -25,6 +25,7 @@ impl FromRequest for PGClient {
     }
 }
 
+/// 智能指针
 impl Deref for PGClient {
     type Target = Client;
 

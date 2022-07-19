@@ -41,6 +41,7 @@ psql -f sql/trigger.sql wepo -U postgres
 GRANT ALL PRIVILEGES ON SCHEMA main TO ww;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA main to ww;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA main to ww;
+
 ```
 
 ### 5. 创建 `.env` 文件

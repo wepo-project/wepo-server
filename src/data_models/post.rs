@@ -21,9 +21,9 @@ pub struct PostExtends {
     pub sender: UserData,
     pub content: String,
     pub create_time: NaiveDateTime,
-    pub like_count: i64,
-    pub comment_count: i64,
-    pub hate_count: i64,
+    pub like_count: i32,
+    pub comment_count: i32,
+    pub hate_count: i32,
     /// 我是否点赞，从redis上获取
     pub liked: bool,
     /// 是否讨厌，从redis上获取
@@ -105,12 +105,12 @@ impl SyncCache for PostExtends {
             .into_iter();
 
         if let Some(val) = ret.next() {
-            if let Some(num) = val.bulk_to_i64() {
+            if let Some(num) = val.bulk_to_num() {
                 self.like_count = num;
             }
         }
         if let Some(val) = ret.next() {
-            if let Some(num) = val.bulk_to_i64() {
+            if let Some(num) = val.bulk_to_num() {
                 self.hate_count = num;
             }
         }

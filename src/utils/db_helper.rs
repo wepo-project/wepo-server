@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use actix::Addr;
 use actix_redis::{resp_array, Command, RedisActor, RespValue};
 use async_trait::async_trait;
@@ -84,7 +86,7 @@ impl RedisCmd {
 pub trait RespValueRedisHelper {
     fn integer_to_bool(&self) -> bool;
     fn integer_to_i64(&self) -> i64;
-    fn bulk_to_i64(&self) -> Option<i64>;
+    fn bulk_to_num<N: FromStr>(&self) -> Option<N>;
 }
 
 impl RespValueRedisHelper for RespValue {
@@ -100,9 +102,9 @@ impl RespValueRedisHelper for RespValue {
             _ => 0,
         }
     }
-    fn bulk_to_i64(&self) -> Option<i64> {
+    fn bulk_to_num<N: FromStr>(&self) -> Option<N> {
         if let RespValue::BulkString(bytes) = self {
-            if let Ok(num) = String::from_utf8_lossy(bytes).into_owned().parse::<i64>() {
+            if let Ok(num) = String::from_utf8_lossy(bytes).into_owned().parse::<N>() {
                 return Some(num);
             }
         }
