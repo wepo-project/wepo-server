@@ -59,6 +59,7 @@ pub async fn like(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let _ = db::post::like(&like_body.id, &user.id, &redis_addr).await?;
+    // MsgService::sender_like_notice(&user.id, receiver_id, post_id, client)
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -94,7 +95,7 @@ pub async fn comment(
     info!("New Comment:{}", comment_result.id);
     // 评论成功，发送通知, 如果评论自己就不发送了
     if user.id != comment_result.receiver {
-        MsgService::send_comment_notice(&user.id, &comment_result.receiver, &comment_result.id, &client).await?;
+        MsgService::send_comment_notice(&user.id, &comment_result.receiver, &comment_result.id, &client).await;
     }
 
     let result = AddPostResultDTO {

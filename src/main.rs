@@ -76,7 +76,8 @@ async fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::scope("/msg")
-                        .route("/comments", post().to(MsgHandler::get_comments)), // 获取通知
+                        .route("/comments", post().to(MsgHandler::get_comment_notices)) // 获取通知
+                        .route("/likes", post().to(MsgHandler::get_like_notices)) // 获取通知
                     )
             )
     })

@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+
 use crate::{
     base::{big_int::BigInt, pg_client::PGClient},
     data_models::notice::NoticeType,
@@ -11,14 +13,30 @@ pub async fn send_comment_notice(
     receiver_id: &i32,
     post_id: &BigInt,
     client: &PGClient,
-) -> Result<(), MyError> {
-    db::msg::send_notice(
+) -> () {
+    let _result = db::msg::send_notice(
         sender_id,
         &NoticeType::Comment,
         &post_id.to_string(),
         receiver_id,
         &client,
     )
-    .await?;
-    Ok(())
+    .await;
+}
+
+/// 发送点赞通知
+pub async fn sender_like_notice(
+    sender_id: &i32,
+    receiver_id: &i32,
+    post_id: &BigInt,
+    client: &PGClient
+) -> () {
+    let _result = db::msg::send_notice(
+        sender_id,
+        &NoticeType::Like,
+        &post_id.to_string(),
+        receiver_id,
+        &client,
+    )
+    .await;
 }
