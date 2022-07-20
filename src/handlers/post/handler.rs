@@ -78,8 +78,8 @@ pub async fn mine(
     body: web::Json<GetPageDTO>,
     client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
-) -> Result<HttpResponse, Error> {
-    let paging = Paging::default(&body.page);
+) -> Result<HttpResponse, actix_web::Error> {
+    let paging = Paging::default(&body.page)?;
     let list = db::post::get_mine(&user, &paging, &client, &redis_addr).await?;
     paging.finish(list)
 }
@@ -129,8 +129,8 @@ pub async fn browse(
     body: web::Query<GetPageDTO>,
     client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
-) -> Result<impl Responder, Error> {
-    let paging = Paging::default(&body.page);
+) -> Result<impl Responder, actix_web::Error> {
+    let paging = Paging::default(&body.page)?;
     let list = db::post::browse(&user, &client, &paging, &redis_addr).await?;
     paging.finish(list)
 }

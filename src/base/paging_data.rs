@@ -26,13 +26,17 @@ pub struct Paging<'a> {
 }
 
 impl<'a> Paging<'a> {
-    pub fn default(page: &'a i64) -> Self {
+    pub fn default(page: &'a i64) -> Result<Self, actix_web::Error> {
         /// 每页的数量
         const COUNT_PER_PAGE: i64 = 20;
-        Self::new(&COUNT_PER_PAGE, page)
+        Ok(Self::new(&COUNT_PER_PAGE, page)?)
     }
-    pub fn new(limit: &'static i64, page: &'a i64) -> Self {
-        Self { limit, page, offset: limit * (page - 1) }
+    pub fn new(limit: &'static i64, page: &'a i64) -> Result<Self, actix_web::Error> {
+        if page <= &0 {
+            Err(actix_web::error::ErrorBadRequest("page must greater than 0"))
+        } else {
+            Ok(Self { limit, page, offset: limit * (page - 1) })
+        }
     }
     pub fn limit(&self) -> &i64 {
         self.limit

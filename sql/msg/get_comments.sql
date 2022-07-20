@@ -8,7 +8,8 @@ SELECT
     u.avatar_url AS sender_avatar_url,
     p.content AS content,
     p.extends AS origin_id,
-    p2.content AS origin
+    p2.content AS origin,
+    p2.create_time AS origin_create_time
 FROM main.notices as n
 LEFT JOIN main.users as u ON u.id = n.sender
 LEFT JOIN main.posts as p ON p.id = CAST(n.sender_obj_id as bigint)

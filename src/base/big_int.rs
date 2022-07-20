@@ -1,6 +1,5 @@
 use std::{error::Error, fmt::Display, num::ParseIntError, ops::Deref};
 
-use log::info;
 use serde::{Serialize, Deserialize, de::Visitor};
 use tokio_postgres::types::{ToSql, Type, to_sql_checked, accepts, FromSql, IsNull};
 use actix_web::web::BytesMut;

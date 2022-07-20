@@ -38,14 +38,16 @@ pub struct NoticeComment {
     pub post_id: BigInt,
     /// 评论内容
     pub content: String,
+    /// 评论时间
+    pub create_time: NaiveDateTime,
+    /// 已读
+    pub read: bool,
     /// 原文id
     pub origin_id: BigInt,
     /// 原文
     pub origin: String,
-    /// 时间
-    pub create_time: NaiveDateTime,
-    /// 已读
-    pub read: bool,
+    /// 原文时间
+    pub origin_create_time: NaiveDateTime,
 }
 
 impl From<&Row> for NoticeComment {
@@ -63,6 +65,7 @@ impl From<&Row> for NoticeComment {
             origin: row.get("origin"),
             create_time: row.get("create_time"),
             read: row.get("read"),
+            origin_create_time: row.get("origin_create_time"),
         }
     }
 }

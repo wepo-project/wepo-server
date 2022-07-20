@@ -83,8 +83,8 @@ pub async fn change_nick(
 pub async fn search_user(
     body: web::Json<SearchUserDTO>,
     client: PGClient,
-) -> Result<HttpResponse, MyError> {
-    let paging = Paging::default(&body.page);
+) -> Result<HttpResponse, actix_web::Error> {
+    let paging = Paging::default(&body.page)?;
     let list = db::user::search_user(&client, &body.nick, &paging).await?;
     paging.finish(list)
 }
