@@ -60,19 +60,20 @@ pub async fn get_comment_notices<'a>(
 
 
 /// 获取点赞通知
-pub async fn get_like_notices<'a>(
+pub async fn get_post_notices<'a>(
+    notice_type: &NoticeType,
     user: &UserInfo,
     client: &PGClient,
     paging: &Paging<'a>,
 ) -> Result<Vec<NoticeLike>, MyError> {
-    let _stmt = include_str!("../../sql/msg/get_notices.sql");
+    let _stmt = include_str!("../../sql/msg/get_post_notices.sql");
     let stmt = client.prepare(_stmt).await?;
     // 未读消息，需要设置 read: true
     let mut unread_vec = vec![];
 
     let vec = client
     .query(&stmt, &[
-        NoticeType::Like.to_i16(),
+        notice_type.to_i16(),
         &user.id, 
         paging.limit(), 
         paging.offset()

@@ -55,7 +55,7 @@ macro_rules! cmd_define {
         $(
             $(#[$outer])*
             #[allow(dead_code)]
-            pub fn $i($($arg: &String,)*) -> Command {
+            pub fn $i<I: Into<RespValue>>($($arg: I,)*) -> Command {
                 cmd![stringify!($i), $($arg,)*]
             }
         )*
@@ -82,6 +82,8 @@ impl RedisCmd {
         (srem, key, member),
         /// 数组push
         (lpush, key, value),
+        /// 设置过期
+        (expire, key, seconds),
     }
 }
 

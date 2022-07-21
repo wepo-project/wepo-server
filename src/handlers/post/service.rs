@@ -6,7 +6,11 @@ use crate::{
     errors::MyError, utils::db_helper::{RedisActorHelper, RespValueRedisHelper, RedisCmd},
 };
 
+use super::storage;
+
 /// 根据postid 获取 发送者id
+/// 先从redis取，如果取不到则从 postgres 取
+/// 从 postgres 取完后设置到 redis 上，并设置过期时间
 pub async fn get_post_sender_from_id(
     post_id: &BigInt,
     client: &PGClient,
@@ -29,8 +33,9 @@ pub async fn get_post_sender_from_id(
         .map(|row| row.get("sender"))
         .collect::<Vec<i32>>()
         .pop();
-    if let Some(id) = result {
-        return Ok(id);
+    if let Some(user_id) = result {
+        storage::save_post_sender_cache(redis_addr, post_id, &user_id);
+        return Ok(user_id);
     }
     Err(MyError::NotFound)
 }

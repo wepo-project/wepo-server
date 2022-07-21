@@ -27,7 +27,8 @@ pub async fn send_comment_notice(
 }
 
 /// 发送点赞通知
-pub async fn sender_like_notice(
+pub async fn sender_post_notice(
+    notice_type: &NoticeType,
     sender_id: &i32,
     post_id: &BigInt,
     client: &PGClient,
@@ -40,7 +41,7 @@ pub async fn sender_like_notice(
         if &addressee_id != sender_id {
             let _result = db::msg::send_notice(
                 sender_id,
-                &NoticeType::Like,
+                &notice_type,
                 &post_id.to_string(),
                 &addressee_id,
                 &client,

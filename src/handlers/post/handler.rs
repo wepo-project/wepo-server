@@ -1,19 +1,22 @@
-use actix::{Addr, spawn};
+use actix::{spawn, Addr};
 use actix_redis::RedisActor;
 use actix_web::{web, Error, HttpResponse, Responder};
 use log::info;
 
 use crate::{
     base::{
-        paging_data::{Paging, GetPageDTO},
+        paging_data::{GetPageDTO, Paging},
+        pg_client::PGClient,
         resp::ResultResponse,
-        user_info::UserInfo, pg_client::PGClient,
+        user_info::UserInfo,
     },
-    db,
+    data_models::notice::NoticeType,
     errors::MyError,
-    handlers::{PostDTO::*},
     handlers::MsgService,
+    handlers::PostDTO::*,
 };
+
+use super::storage;
 
 use super::dto::DelPostDTO;
 
@@ -23,11 +26,9 @@ pub async fn add(
     client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
-    let post_id = db::post::add(&user, &post_body, &client, &redis_addr).await?;
+    let post_id = storage::add(&user, &post_body, &client, &redis_addr).await?;
     info!("New Post:{}", post_id);
-    let result = AddPostResultDTO {
-        id: post_id,
-    };
+    let result = AddPostResultDTO { id: post_id };
     Ok(HttpResponse::Ok().json(result))
 }
 
@@ -38,7 +39,7 @@ pub async fn delete(
     client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
-    let _ = db::post::delete(&user, &del_body, &client, &redis_addr).await?;
+    let _ = storage::delete(&user, &del_body, &client, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -49,7 +50,7 @@ pub async fn get_one(
     client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
-    let post = db::post::get_one(&user, &body.id, &client, &redis_addr).await?;
+    let post = storage::get_one(&user, &body.id, &client, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(post))
 }
 
@@ -60,10 +61,14 @@ pub async fn like(
     redis_addr: web::Data<Addr<RedisActor>>,
     client: PGClient,
 ) -> Result<HttpResponse, Error> {
-    let _ = db::post::like(&data.id, &user.id, &redis_addr).await?;
-    spawn(async move {
-        let _ = MsgService::sender_like_notice(&user.id, &data.id, &client, &redis_addr).await;
-    });
+    let _ = storage::like(&data.id, &user.id, &redis_addr).await?;
+    let _ = MsgService::sender_post_notice(
+        &NoticeType::Like,
+        &user.id,
+        &data.id,
+        &client,
+        &redis_addr,
+    );
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -73,7 +78,7 @@ pub async fn cancel_like(
     like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
-    let _ = db::post::cancel_like(&like_body.id, &user.id, &redis_addr).await?;
+    let _ = storage::cancel_like(&like_body.id, &user.id, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -85,7 +90,7 @@ pub async fn mine(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let paging = Paging::default(&body.page)?;
-    let list = db::post::get_mine(&user, &paging, &client, &redis_addr).await?;
+    let list = storage::get_mine(&user, &paging, &client, &redis_addr).await?;
     paging.finish(list)
 }
 
@@ -95,11 +100,17 @@ pub async fn comment(
     body: web::Json<CommentPostDTO>,
     client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    let comment_result = db::post::comment(&user, &body, &client).await?;
+    let comment_result = storage::comment(&user, &body, &client).await?;
     info!("New Comment:{}", comment_result.id);
     // 评论成功，发送通知, 如果评论自己就不发送了
     if user.id != comment_result.receiver {
-        MsgService::send_comment_notice(&user.id, &comment_result.receiver, &comment_result.id, &client).await;
+        MsgService::send_comment_notice(
+            &user.id,
+            &comment_result.receiver,
+            &comment_result.id,
+            &client,
+        )
+        .await;
     }
 
     let result = AddPostResultDTO {
@@ -111,10 +122,18 @@ pub async fn comment(
 /// 反感
 pub async fn hate(
     user: UserInfo,
-    like_body: web::Query<LikePostDTO>,
+    data: web::Query<LikePostDTO>,
+    client: PGClient,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
-    let _ = db::post::hate(&like_body.id, &user.id, &redis_addr).await?;
+    let _ = storage::hate(&data.id, &user.id, &redis_addr).await?;
+    let _ = MsgService::sender_post_notice(
+        &NoticeType::Hate,
+        &user.id,
+        &data.id,
+        &client,
+        &redis_addr,
+    );
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -124,7 +143,7 @@ pub async fn cancel_hate(
     like_body: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
-    let _ = db::post::cancel_hate(&like_body.id, &user.id, &redis_addr).await?;
+    let _ = storage::cancel_hate(&like_body.id, &user.id, &redis_addr).await?;
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -136,6 +155,6 @@ pub async fn browse(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<impl Responder, actix_web::Error> {
     let paging = Paging::default(&body.page)?;
-    let list = db::post::browse(&user, &client, &paging, &redis_addr).await?;
+    let list = storage::browse(&user, &client, &paging, &redis_addr).await?;
     paging.finish(list)
 }

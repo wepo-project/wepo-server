@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use actix::Addr;
-use actix_redis::RedisActor;
+use actix_redis::{RedisActor, resp_array, RespValue};
 use futures::future::{join_all, try_join_all};
 use log::info;
 use once_cell::sync::Lazy;
@@ -38,7 +38,7 @@ pub async fn add(
     client: &PGClient,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<BigInt, MyError> {
-    let _stmt = include_str!("../../sql/post/add.sql");
+    let _stmt = include_str!("../../../sql/post/add.sql");
     let stmt = client.prepare(&_stmt).await?;
     let post_id = get_next_id()?;
     let result = client
@@ -51,14 +51,22 @@ pub async fn add(
         .ok_or(MyError::NotFound);
 
     if let Ok(id) = result {
-        // 设置 postId -> userId 映射
-        redis_addr.do_send(RedisCmd::set(
-            &RedisKey::post_sender(&post_id),
-            &id.to_string(),
-        ));
+        save_post_sender_cache(redis_addr, &id, &user.id);
     }
 
     result
+}
+
+/// 设置 postId -> userId 映射
+pub fn save_post_sender_cache(redis_addr: &Addr<RedisActor>, post_id: &BigInt, user_id: &i32) {
+    redis_addr.do_send(RedisCmd::set(
+        &RedisKey::post_sender(&post_id),
+        &user_id.to_string(),
+    ));
+    // redis_addr.do_send(RedisCmd::expire(
+    //     &RedisKey::post_sender(&post_id),
+    //     "604800", // 一周时间 过期
+    // ));
 }
 
 /// 删除推文
@@ -69,7 +77,7 @@ pub async fn delete(
     client: &PGClient,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<(), MyError> {
-    let _stmt = include_str!("../../sql/post/delete.sql");
+    let _stmt = include_str!("../../../sql/post/delete.sql");
     let stmt = client.prepare(_stmt).await?;
 
     let vec = client.query(&stmt, &[&del_data.id, &user.id]).await?;
@@ -95,7 +103,7 @@ pub async fn get_one(
     client: &PGClient,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<impl Serialize, MyError> {
-    let _stmt = include_str!("../../sql/post/get.sql");
+    let _stmt = include_str!("../../../sql/post/get.sql");
     let stmt = client.prepare(_stmt).await?;
     let mut post_ext = client
         .query(&stmt, &[&post_id])
@@ -112,7 +120,7 @@ pub async fn get_one(
     let _ = post_ext.sync_cache_data(Some(user), redis_addr).await;
 
     // 获取评论
-    let _stmt = include_str!("../../sql/post/get_comments.sql");
+    let _stmt = include_str!("../../../sql/post/get_comments.sql");
     let stmt = client.prepare(_stmt).await?;
     let _skip = PostExtendsWithComment::max_comments() as i64;
     let _offset: i64 = 0;
@@ -203,7 +211,7 @@ pub async fn get_mine<'a>(
     client: &PGClient,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {
-    let _stmt = include_str!("../../sql/post/get_list.sql");
+    let _stmt = include_str!("../../../sql/post/get_list.sql");
     let stmt = client.prepare(_stmt).await?;
     let vec = client
         .query(&stmt, &[&user.id, paging.limit(), paging.offset()])
@@ -224,7 +232,7 @@ pub async fn comment(
     data: &CommentPostDTO,
     client: &PGClient,
 ) -> Result<CommentResult, MyError> {
-    let _stmt = include_str!("../../sql/post/comment.sql");
+    let _stmt = include_str!("../../../sql/post/comment.sql");
     let stmt = client.prepare(&_stmt).await?;
     let post_id = get_next_id()?;
 
@@ -300,7 +308,7 @@ pub async fn browse<'a>(
     paging: &Paging<'a>,
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {
-    let _stmt = include_str!("../../sql/post/browse.sql");
+    let _stmt = include_str!("../../../sql/post/browse.sql");
     let stmt = client.prepare(_stmt).await?;
     let vec = client
         .query(&stmt, &[paging.limit(), paging.offset()])
