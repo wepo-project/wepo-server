@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS main.posts
     -- 讨厌数量
     hates integer NOT NULL DEFAULT 0,
     -- 继承（评论）哪条po文
-    extends bigint REFERENCES main.posts(id) ON DELETE CASCADE,
+    extends bigint REFERENCES main.posts(id),
     -- 主键约束
     CONSTRAINT posts_pkey PRIMARY KEY (id)
 );
@@ -72,7 +72,9 @@ CREATE TABLE IF NOT EXISTS main.notices
     -- 是否已读
     read boolean NOT NULL DEFAULT FALSE,
     -- 主键约束
-    CONSTRAINT notices_pkey PRIMARY KEY (id)
+    CONSTRAINT notices_pkey PRIMARY KEY (id),
+    -- 唯一约束
+    UNIQUE (sender, notice_type, sender_obj_id)
 );
 
 -- 好友关系表

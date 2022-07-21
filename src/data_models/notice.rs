@@ -1,11 +1,10 @@
-use std::ops::Deref;
 
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper_derive::PostgresMapper;
 use tokio_postgres::Row;
 
-use crate::{base::big_int::BigInt, errors::MyError};
+use crate::{base::big_int::BigInt, define_num_enum};
 
 use super::user::UserData;
 
@@ -28,58 +27,16 @@ pub struct Notice {
     pub read: bool,
 }
 
-/// 通知的类型
-macro_rules! notice_type {
-    ($(
-        $(#[$outer:meta])*
-        [$type:ident => $num:expr]
-    ),* $(,)?) => {
-        /// 通知类型
-        #[allow(dead_code)]
-        pub enum NoticeType {
-            $(
-                $(#[$outer])*
-                $type,
-            )*
-        }
-        impl NoticeType {
-            pub fn to_i16(&self) -> &'static i16 {
-                match self {
-                    $(
-                        NoticeType::$type => &$num,
-                    )*
-                }
-            }
-        }
-        impl Deref for NoticeType {
-            type Target = i16;
-
-            fn deref(&self) -> &Self::Target {
-                self.to_i16()
-            }
-        }
-
-        impl TryFrom<i16> for NoticeType {
-            type Error = MyError;
-
-            fn try_from(value: i16) -> Result<Self, Self::Error> {
-                use NoticeType::*;
-                match value {
-                    $(
-                        $num => Ok($type),
-                    )*
-                    _ => Err(MyError::ParseError)
-                }
-            }
-        }
-    };
-}
-
-notice_type! {
-    /// 一个人评论了你, 评论的id
-    [Comment => 1],
-    /// 点赞通知
-    [Like => 2],
+define_num_enum!{
+    /// 通知类型
+    NoticeType {
+        /// 一个人评论了你, 评论的id
+        [Comment => 1],
+        /// 点赞通知
+        [Like => 2],
+        /// 点赞通知
+        [Hate => 3],
+    }
 }
 
 

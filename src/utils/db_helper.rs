@@ -68,6 +68,8 @@ impl RedisCmd {
     cmd_define! {
         /// 获取
         (get, key),
+        /// 设置
+        (set, key, value),
         /// 自增
         (incr, key),
         /// 自减

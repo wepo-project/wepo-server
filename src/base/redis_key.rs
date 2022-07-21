@@ -29,5 +29,7 @@ impl RedisKey {
         (post_hates, post_id),
         /// 反感集合
         (post_hate_count, post_id),
+        /// 获取post的发送者
+        (post_sender, post_id)
     }
 }

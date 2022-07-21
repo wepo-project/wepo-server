@@ -10,3 +10,4 @@ pub use user::dto as UserDTO;
 pub use post::dto as PostDTO;
 
 pub use msg::service as MsgService;
+pub use post::service as PostService;

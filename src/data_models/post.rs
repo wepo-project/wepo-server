@@ -151,5 +151,3 @@ impl PostExtendsWithComment {
         MAX_COMMENTS
     }
 }
-
-

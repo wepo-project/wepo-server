@@ -1,4 +1,4 @@
-use actix::Addr;
+use actix::{Addr, spawn};
 use actix_redis::RedisActor;
 use actix_web::{web, Error, HttpResponse, Responder};
 use log::info;
@@ -21,8 +21,9 @@ pub async fn add(
     user: UserInfo,
     post_body: web::Json<AddPostDTO>,
     client: PGClient,
+    redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
-    let post_id = db::post::add(&user, &post_body, &client).await?;
+    let post_id = db::post::add(&user, &post_body, &client, &redis_addr).await?;
     info!("New Post:{}", post_id);
     let result = AddPostResultDTO {
         id: post_id,
@@ -55,11 +56,14 @@ pub async fn get_one(
 /// 点赞
 pub async fn like(
     user: UserInfo,
-    like_body: web::Query<LikePostDTO>,
+    data: web::Query<LikePostDTO>,
     redis_addr: web::Data<Addr<RedisActor>>,
+    client: PGClient,
 ) -> Result<HttpResponse, Error> {
-    let _ = db::post::like(&like_body.id, &user.id, &redis_addr).await?;
-    // MsgService::sender_like_notice(&user.id, receiver_id, post_id, client)
+    let _ = db::post::like(&data.id, &user.id, &redis_addr).await?;
+    spawn(async move {
+        let _ = MsgService::sender_like_notice(&user.id, &data.id, &client, &redis_addr).await;
+    });
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 

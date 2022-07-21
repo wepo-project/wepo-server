@@ -8,7 +8,7 @@ SELECT
     r1.sender_nick, 
     r1.sender_id,
     p1.id AS origin_id,
-    p1.content AS origin_content,
+    p1.content::varchar(200) AS origin_content,
     p1.create_time AS origin_create_time,
     u1.nick AS origin_sender_nick,
     u1.id AS origin_sender_id

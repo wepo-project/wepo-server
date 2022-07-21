@@ -1,3 +1,5 @@
-DELETE FROM main.posts 
-WHERE id = $1 AND sender = $2 
+UPDATE main.posts
+SET status = $1;
+WHERE id = $2 AND sender = $3
+
 RETURNING id, extends;

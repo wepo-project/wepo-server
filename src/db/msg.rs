@@ -8,16 +8,16 @@ use crate::{
 /// 发送通知
 pub async fn send_notice(
     sender: &i32, 
-    notice_type: &i16, 
+    notice_type: &NoticeType, 
     sender_obj_id: &String, 
     addressee_id: &i32,
     client: &PGClient,
 ) -> Result<(), MyError> {
     let _stmt = include_str!("../../sql/msg/insert_notices.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(_stmt).await?;
 
     client
-        .query(&stmt, &[sender, notice_type, sender_obj_id, addressee_id])
+        .query(&stmt, &[sender, notice_type.to_i16(), sender_obj_id, addressee_id])
         .await?
         .iter()
         .map(|_| ())
@@ -33,7 +33,7 @@ pub async fn get_comment_notices<'a>(
     paging: &Paging<'a>,
 ) -> Result<Vec<NoticeComment>, MyError> {
     let _stmt = include_str!("../../sql/msg/get_comment_notices.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(_stmt).await?;
     // 未读消息，需要设置 read: true
     let mut unread_vec = vec![];
 
@@ -59,14 +59,14 @@ pub async fn get_comment_notices<'a>(
 }
 
 
-/// 获取评论通知
+/// 获取点赞通知
 pub async fn get_like_notices<'a>(
     user: &UserInfo,
     client: &PGClient,
     paging: &Paging<'a>,
 ) -> Result<Vec<NoticeLike>, MyError> {
-    let _stmt = include_str!("../../sql/msg/get_comment_notices.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let _stmt = include_str!("../../sql/msg/get_notices.sql");
+    let stmt = client.prepare(_stmt).await?;
     // 未读消息，需要设置 read: true
     let mut unread_vec = vec![];
 

@@ -1,0 +1,1 @@
+SELECT sender from main.posts WHERE id = $1;

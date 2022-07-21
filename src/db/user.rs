@@ -10,7 +10,7 @@ use tokio_postgres::error::SqlState;
 /// 数据库添加用户
 pub async fn add(client: &PGClient, mut user_info: RegisterUserDTO) -> Result<UserData, MyError> {
     let _stmt = include_str!("../../sql/user/add_user.sql");
-    let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(&_stmt).await?;
 
     let _salt = create_salt();
     if let Some(_pwd) = &user_info.pwd {
@@ -56,7 +56,7 @@ pub fn pwd_encrypt<S: Into<String>>(pwd: S, salt: &String) -> String {
 /// 201 没输入密码
 pub async fn validate_user(client: &PGClient, user_info: LoginUserDTO, from_token: bool) -> Result<UserData, MyError> {
     let _stmt = include_str!("../../sql/user/get_user_from_nick.sql");
-    let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(&_stmt).await?;
 
     let user = client
         .query(&stmt, &[&user_info.nick])
@@ -94,7 +94,7 @@ pub async fn validate_user(client: &PGClient, user_info: LoginUserDTO, from_toke
 /// 修改昵称
 pub async fn change_nick(client: &PGClient, id: &i32, nick: &String) -> Result<String, MyError> {
     let _stmt = include_str!("../../sql/user/change_nick.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(_stmt).await?;
     client
         .query(&stmt, &[id, nick])
         .await?
@@ -108,7 +108,7 @@ pub async fn change_nick(client: &PGClient, id: &i32, nick: &String) -> Result<S
 /// 搜索用户
 pub async fn search_user<'a>(client: &PGClient, nick: &String, paging: &Paging<'a>) -> Result<Vec<UserData>, MyError> {
     let _stmt = include_str!("../../sql/user/search_user.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(_stmt).await?;
     Ok(client
         .query(&stmt, &[&format!("%{}%", nick), paging.limit(), paging.offset()])
         .await?

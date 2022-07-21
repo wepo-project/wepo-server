@@ -9,10 +9,13 @@ use serde::Serialize;
 use snowflake::SnowflakeIdBucket;
 
 use crate::{
-    base::{redis_key::RedisKey, user_info::UserInfo, paging_data::Paging, pg_client::PGClient, big_int::BigInt},
+    base::{
+        big_int::BigInt, paging_data::Paging, pg_client::PGClient, redis_key::RedisKey,
+        user_info::UserInfo,
+    },
     data_models::post::{PostExtends, PostExtendsWithComment},
     errors::MyError,
-    handlers::post::{dto::*, data::CommentResult},
+    handlers::post::{data::CommentResult, dto::*},
     traits::sync_cache::SyncCache,
     utils::db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper},
 };
@@ -29,18 +32,33 @@ fn get_next_id() -> Result<i64, MyError> {
 }
 
 /// 添加
-pub async fn add(user: &UserInfo, post_data: &AddPostDTO, client: &PGClient) -> Result<BigInt, MyError> {
+pub async fn add(
+    user: &UserInfo,
+    post_data: &AddPostDTO,
+    client: &PGClient,
+    redis_addr: &Addr<RedisActor>,
+) -> Result<BigInt, MyError> {
     let _stmt = include_str!("../../sql/post/add.sql");
-    let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(&_stmt).await?;
     let post_id = get_next_id()?;
-    client
+    let result = client
         .query(&stmt, &[&post_id, &user.id, &post_data.content])
         .await?
         .iter()
         .map(|row| row.get("id"))
         .collect::<Vec<BigInt>>()
         .pop()
-        .ok_or(MyError::NotFound)
+        .ok_or(MyError::NotFound);
+
+    if let Ok(id) = result {
+        // 设置 postId -> userId 映射
+        redis_addr.do_send(RedisCmd::set(
+            &RedisKey::post_sender(&post_id),
+            &id.to_string(),
+        ));
+    }
+
+    result
 }
 
 /// 删除推文
@@ -52,12 +70,9 @@ pub async fn delete(
     redis_addr: &Addr<RedisActor>,
 ) -> Result<(), MyError> {
     let _stmt = include_str!("../../sql/post/delete.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(_stmt).await?;
 
-    let vec = client
-        .query(&stmt, &[&del_data.id, &user.id])
-        .await
-        .map_err(MyError::PGError)?;
+    let vec = client.query(&stmt, &[&del_data.id, &user.id]).await?;
 
     // 返回条数 大于0 删除成功
     if vec.len() > 0 {
@@ -81,7 +96,7 @@ pub async fn get_one(
     redis_addr: &Addr<RedisActor>,
 ) -> Result<impl Serialize, MyError> {
     let _stmt = include_str!("../../sql/post/get.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(_stmt).await?;
     let mut post_ext = client
         .query(&stmt, &[&post_id])
         .await?
@@ -98,7 +113,7 @@ pub async fn get_one(
 
     // 获取评论
     let _stmt = include_str!("../../sql/post/get_comments.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(_stmt).await?;
     let _skip = PostExtendsWithComment::max_comments() as i64;
     let _offset: i64 = 0;
     let mut comments = client
@@ -111,7 +126,6 @@ pub async fn get_one(
         })
         .collect::<Vec<PostExtends>>();
 
-    info!("async comments:{}", comments.len());
     // 同步每一条评论的点赞和评论数量
     let _result = try_join_all(
         comments
@@ -190,8 +204,10 @@ pub async fn get_mine<'a>(
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {
     let _stmt = include_str!("../../sql/post/get_list.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
-    let vec = client.query(&stmt, &[&user.id, paging.limit(), paging.offset()]).await?;
+    let stmt = client.prepare(_stmt).await?;
+    let vec = client
+        .query(&stmt, &[&user.id, paging.limit(), paging.offset()])
+        .await?;
 
     Ok(join_all(vec.iter().map(|row| async move {
         // move 把row引用带出闭包
@@ -209,9 +225,9 @@ pub async fn comment(
     client: &PGClient,
 ) -> Result<CommentResult, MyError> {
     let _stmt = include_str!("../../sql/post/comment.sql");
-    let stmt = client.prepare(&_stmt).await.map_err(MyError::PGError)?;
+    let stmt = client.prepare(&_stmt).await?;
     let post_id = get_next_id()?;
-    
+
     client
         .query(&stmt, &[&post_id, &user.id, &data.content, &data.origin_id])
         .await?
@@ -285,8 +301,10 @@ pub async fn browse<'a>(
     redis_addr: &Addr<RedisActor>,
 ) -> Result<Vec<PostExtends>, MyError> {
     let _stmt = include_str!("../../sql/post/browse.sql");
-    let stmt = client.prepare(_stmt).await.map_err(MyError::PGError)?;
-    let vec = client.query(&stmt, &[paging.limit(), paging.offset()]).await?;
+    let stmt = client.prepare(_stmt).await?;
+    let vec = client
+        .query(&stmt, &[paging.limit(), paging.offset()])
+        .await?;
 
     Ok(join_all(vec.iter().map(|row| async move {
         let mut post = PostExtends::from(row);

@@ -3,10 +3,17 @@ use std::{pin::Pin, ops::Deref};
 use actix_web::{FromRequest, web};
 use deadpool_postgres::{Client, Pool};
 use futures::Future;
+use tokio_postgres::Statement;
 
 use crate::errors::MyError;
 
 pub struct PGClient(Client);
+
+impl PGClient {
+    pub async fn prepare(&self, query: &str) -> Result<Statement, MyError> {
+        self.0.prepare(query).await.map_err(MyError::PGError)
+    }
+}
 
 impl FromRequest for PGClient {
     type Error = MyError;

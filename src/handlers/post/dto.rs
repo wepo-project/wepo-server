@@ -20,7 +20,7 @@ pub struct DelPostDTO {
 
 #[derive(Deserialize, Serialize)]
 pub struct LikePostDTO {
-    pub id: i64,
+    pub id: BigInt,
 }
 
 

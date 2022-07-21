@@ -30,8 +30,9 @@ impl From<&Row> for User {
 impl User {
     pub fn get_avatar_url(arg: &String) -> String {
         format!(
-            "https://avatars.dicebear.com/api/{}/{}.svg",
-            "pixel-art-neutral", arg
+            // "https://avatars.dicebear.com/api/{}/{}.svg",
+            "https://ui-avatars.com/api/?name={}",
+            arg
         )
     }
     pub fn to_user_data(&self) -> UserData {
@@ -68,11 +69,9 @@ impl UserData {
         None
     }
     pub fn unreference(id: &i32, nick: Option<String>, avatar_url: Option<String>) -> Self {
-        Self::new(
-            &id,
-            &nick.unwrap_or_else(|| id.to_string()),
-            Some(avatar_url.unwrap_or_else(|| User::get_avatar_url(&id.to_string()))),
-        )
+        let nick = &nick.unwrap_or_else(|| id.to_string());
+        let avatar_url = avatar_url.unwrap_or_else(|| User::get_avatar_url(nick));
+        Self::new(&id, nick, Some(avatar_url))
     }
 }
 

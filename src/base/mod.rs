@@ -4,3 +4,4 @@ pub mod redis_key;
 pub mod big_int;
 pub mod paging_data;
 pub mod pg_client;
+pub mod enum_num;
