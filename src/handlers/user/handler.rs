@@ -1,10 +1,11 @@
 use crate::{
-    base::{user_info::UserInfo, pg_client::PGClient, paging_data::Paging}, db, errors::MyError,
-    handlers::user::auth as AuthHandler, handlers::user::dto::*,
+    base::{user_info::UserInfo, pg_client::PGClient, paging_data::Paging}, errors::MyError,
+    handlers::user::{auth as AuthHandler, storage}, handlers::user::dto::*,
 };
 
 use actix_web::{web, Error, HttpResponse};
 use log::info;
+
 
 /// 用户注册
 pub async fn register(
@@ -14,7 +15,7 @@ pub async fn register(
     if user_info.nick.is_empty() {
         return Err(MyError::err_code(301));
     }
-    let new_user = db::user::add(&client, user_info.0).await?;
+    let new_user = storage::add(&client, user_info.0).await?;
     info!("creating a new user:{}", new_user.nick);
     let result = RegisterResultDTO {
         id: new_user.id,
@@ -31,7 +32,7 @@ pub async fn login(
 ) -> Result<HttpResponse, Error> {
     let user_info: LoginUserDTO = user.into_inner();
 
-    let user = db::user::validate_user(&client, user_info, false).await?;
+    let user = storage::validate_user(&client, user_info, false).await?;
 
     let token = AuthHandler::create_jwt(&user.id, &user.nick)?;
 
@@ -50,7 +51,7 @@ pub async fn login_with_token(
     user: UserInfo,
     client: PGClient,
 ) -> Result<HttpResponse, MyError> {
-    let user = db::user::validate_user(
+    let user = storage::validate_user(
         &client,
         LoginUserDTO {
             nick: user.nick.clone(),
@@ -74,7 +75,7 @@ pub async fn change_nick(
     client: PGClient,
 ) -> Result<HttpResponse, MyError> {
     let mut data = data.into_inner();
-    let nick = db::user::change_nick(&client, &user.id, &data.nick).await?;
+    let nick = storage::change_nick(&client, &user.id, &data.nick).await?;
     data.nick = nick;
     Ok(HttpResponse::Ok().json(data))
 }
@@ -85,6 +86,6 @@ pub async fn search_user(
     client: PGClient,
 ) -> Result<HttpResponse, actix_web::Error> {
     let paging = Paging::default(&body.page)?;
-    let list = db::user::search_user(&client, &body.nick, &paging).await?;
+    let list = storage::search_user(&client, &body.nick, &paging).await?;
     paging.finish(list)
 }

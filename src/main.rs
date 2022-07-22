@@ -1,7 +1,6 @@
 mod base;
 mod config;
 mod data_models;
-mod db;
 mod errors;
 mod handlers;
 mod utils;

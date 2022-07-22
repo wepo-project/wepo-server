@@ -1,4 +1,4 @@
-use actix::{spawn, Addr};
+use actix::{Addr, spawn};
 use actix_redis::RedisActor;
 use actix_web::{web, Error, HttpResponse, Responder};
 use log::info;
@@ -62,13 +62,15 @@ pub async fn like(
     client: PGClient,
 ) -> Result<HttpResponse, Error> {
     let _ = storage::like(&data.id, &user.id, &redis_addr).await?;
-    let _ = MsgService::sender_post_notice(
-        &NoticeType::Like,
-        &user.id,
-        &data.id,
-        &client,
-        &redis_addr,
-    );
+    spawn(async move {
+        let _ = MsgService::sender_post_notice(
+            &NoticeType::Like,
+            &user.id,
+            &data.id,
+            &client,
+            &redis_addr,
+        ).await;
+    });
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 
@@ -127,13 +129,15 @@ pub async fn hate(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, Error> {
     let _ = storage::hate(&data.id, &user.id, &redis_addr).await?;
-    let _ = MsgService::sender_post_notice(
-        &NoticeType::Hate,
-        &user.id,
-        &data.id,
-        &client,
-        &redis_addr,
-    );
+    spawn(async move {
+        let _ = MsgService::sender_post_notice(
+            &NoticeType::Hate,
+            &user.id,
+            &data.id,
+            &client,
+            &redis_addr,
+        ).await;
+    });
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 

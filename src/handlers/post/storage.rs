@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use actix::Addr;
-use actix_redis::{RedisActor, resp_array, RespValue};
+use actix_redis::{RedisActor};
 use futures::future::{join_all, try_join_all};
 use log::info;
 use once_cell::sync::Lazy;
@@ -19,6 +19,8 @@ use crate::{
     traits::sync_cache::SyncCache,
     utils::db_helper::{RedisActorHelper, RedisCmd, RespValueRedisHelper},
 };
+
+use super::storage;
 
 /// 雪花id生成器
 static POST_ID_BUCKET: Lazy<Mutex<SnowflakeIdBucket>> =
@@ -59,14 +61,17 @@ pub async fn add(
 
 /// 设置 postId -> userId 映射
 pub fn save_post_sender_cache(redis_addr: &Addr<RedisActor>, post_id: &BigInt, user_id: &i32) {
-    redis_addr.do_send(RedisCmd::set(
-        &RedisKey::post_sender(&post_id),
-        &user_id.to_string(),
-    ));
-    // redis_addr.do_send(RedisCmd::expire(
-    //     &RedisKey::post_sender(&post_id),
-    //     "604800", // 一周时间 过期
-    // ));
+    redis_addr.do_send_all(vec![
+        RedisCmd::set(
+            &RedisKey::post_sender(&post_id),
+            &user_id.to_string(),
+        ),
+        // 一周时间 过期
+        RedisCmd::expire(
+            &RedisKey::post_sender(&post_id),
+            "604800",
+        )
+    ]);
 }
 
 /// 删除推文
@@ -320,4 +325,36 @@ pub async fn browse<'a>(
         post
     }))
     .await)
+}
+
+/// 根据postid 获取 发送者id
+/// 先从redis取，如果取不到则从 postgres 取
+/// 从 postgres 取完后设置到 redis 上，并设置过期时间
+pub async fn get_post_sender_from_id(
+    post_id: &BigInt,
+    client: &PGClient,
+    redis_addr: &Addr<RedisActor>,
+) -> Result<i32, MyError> {
+    let result = redis_addr.exec(RedisCmd::get(&RedisKey::post_sender(&post_id))).await;
+    if let Ok(resp_value) = result {
+        let result = resp_value.bulk_to_num::<i32>();
+        if let Some(id) = result {
+            return Ok(id);
+        }
+    }
+
+    let _stmt = include_str!("../../../sql/post/get_sender.sql");
+    let stmt = client.prepare(_stmt).await?;
+    let result = client
+        .query(&stmt, &[&post_id])
+        .await?
+        .iter()
+        .map(|row| row.get("sender"))
+        .collect::<Vec<i32>>()
+        .pop();
+    if let Some(user_id) = result {
+        storage::save_post_sender_cache(redis_addr, post_id, &user_id);
+        return Ok(user_id);
+    }
+    Err(MyError::NotFound)
 }

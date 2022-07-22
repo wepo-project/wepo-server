@@ -8,17 +8,12 @@ use redis_async::resp::FromResp;
 
 use crate::errors::MyError;
 
-macro_rules! cmd {
-    ($($e:expr),* $(,)?) => {
-        Command(resp_array![$($e),*])
-    };
-}
-
 #[async_trait]
 pub trait RedisActorHelper {
     async fn exec(&self, command: Command) -> Result<RespValue, MyError>;
     async fn exec_all(&self, commands: Vec<Command>) -> Result<Vec<RespValue>, MyError>;
     async fn get_i64(&self, key: &String) -> Result<i64, MyError>;
+    fn do_send_all(&self, commands: Vec<Command>) -> ();
     fn del(&self, key: &String) -> ();
 }
 
@@ -33,6 +28,11 @@ impl RedisActorHelper for Addr<RedisActor> {
     async fn exec_all(&self, commands: Vec<Command>) -> Result<Vec<RespValue>, MyError> {
         try_join_all(commands.into_iter().map(|command| self.exec(command))).await
     }
+    fn do_send_all(&self, commands: Vec<Command>) -> () {
+        for cmd in commands {
+            self.do_send(cmd);
+        }
+    }
     async fn get_i64(&self, key: &String) -> Result<i64, MyError> {
         let result = self.exec(RedisCmd::get(key)).await?;
         let int = String::from_resp(result)
@@ -42,7 +42,7 @@ impl RedisActorHelper for Addr<RedisActor> {
         Ok(int)
     }
     fn del(&self, key: &String) -> () {
-        self.do_send(cmd!["DEL", key]);
+        self.do_send(RedisCmd::del(key));
     }
 }
 
@@ -55,8 +55,8 @@ macro_rules! cmd_define {
         $(
             $(#[$outer])*
             #[allow(dead_code)]
-            pub fn $i<I: Into<RespValue>>($($arg: I,)*) -> Command {
-                cmd![stringify!($i), $($arg,)*]
+            pub fn $i($($arg: impl Into<RespValue>,)*) -> Command {
+                Command(resp_array![stringify!($i), $($arg,)*])
             }
         )*
     };
@@ -70,6 +70,8 @@ impl RedisCmd {
         (get, key),
         /// 设置
         (set, key, value),
+        /// 删除
+        (del, key),
         /// 自增
         (incr, key),
         /// 自减

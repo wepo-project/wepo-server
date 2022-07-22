@@ -87,7 +87,7 @@ impl From<&Row> for NoticeComment {
 
 /// 评论通知
 #[derive(Serialize, Deserialize)]
-pub struct NoticeLike {
+pub struct NoticePost {
     pub id: BigInt,
     /// 点赞者信息
     pub sender: UserData,
@@ -101,7 +101,7 @@ pub struct NoticeLike {
     pub read: bool,
 }
 
-impl From<&Row> for NoticeLike {
+impl From<&Row> for NoticePost {
     fn from(row: &Row) -> Self {
         Self {
             id: row.get("id"),

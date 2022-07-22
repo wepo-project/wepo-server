@@ -7,8 +7,9 @@ use crate::{
         user_info::UserInfo,
     },
     data_models::notice::NoticeType,
-    db,
 };
+
+use super::storage;
 
 /// 获取评论通知
 pub async fn get_comment_notices(
@@ -17,7 +18,7 @@ pub async fn get_comment_notices(
     client: PGClient,
 ) -> Result<HttpResponse, actix_web::Error> {
     let paging = Paging::default(&body.page)?;
-    let list = db::msg::get_comment_notices(&user, &client, &paging).await?;
+    let list = storage::get_comment_notices(&user, &client, &paging).await?;
     paging.finish(list)
 }
 
@@ -28,7 +29,7 @@ pub async fn get_like_notices(
     client: PGClient,
 ) -> Result<HttpResponse, actix_web::Error> {
     let paging = Paging::default(&body.page)?;
-    let list = db::msg::get_post_notices(&NoticeType::Like, &user, &client, &paging).await?;
+    let list = storage::get_post_notices(&NoticeType::Like, &user, &client, &paging).await?;
     paging.finish(list)
 }
 
@@ -39,6 +40,6 @@ pub async fn get_hate_notices(
     client: PGClient,
 ) -> Result<HttpResponse, actix_web::Error> {
     let paging = Paging::default(&body.page)?;
-    let list = db::msg::get_post_notices(&NoticeType::Hate, &user, &client, &paging).await?;
+    let list = storage::get_post_notices(&NoticeType::Hate, &user, &client, &paging).await?;
     paging.finish(list)
 }
