@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS main.notices
     -- 通知类型
     notice_type smallint NOT NULL,
     -- 通知主体的id ， 如果是评论，则为评论id
-    sender_obj_id text NOT NULL,
+    sender_object text NOT NULL,
     -- 接收者
     addressee_id integer NOT NULL REFERENCES main.users(id) ON DELETE CASCADE,
     -- 创建时间
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS main.notices
     -- 主键约束
     CONSTRAINT notices_pkey PRIMARY KEY (id),
     -- 唯一约束
-    UNIQUE (sender, notice_type, sender_obj_id)
+    UNIQUE (sender, notice_type, sender_object)
 );
 
 -- 好友关系表

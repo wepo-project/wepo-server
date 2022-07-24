@@ -18,7 +18,7 @@ pub struct Notice {
     /// 通知类型
     pub notice_type: i16,
     /// 发送的对象主体ID
-    pub sender_obj_id: String,
+    pub sender_object: String,
     /// 接收者的ID
     pub addressee_id: i32,
     /// 创建时间
@@ -36,6 +36,10 @@ define_num_enum!{
         [Like => 2],
         /// 点赞通知
         [Hate => 3],
+        /// 好友添加
+        [FriendAdd => 4],
+        /// 好友移除
+        [FriendRemove => 5],
     }
 }
 
@@ -72,7 +76,7 @@ impl From<&Row> for NoticeComment {
                 row.get("sender_nick"),
                 row.get("sender_avatar_url"),
             ),
-            post_id: row.get("sender_obj_id"),
+            post_id: row.get("sender_object"),
             content: row.get("content"),
             origin_id: row.get("origin_id"),
             origin: row.get("origin"),
@@ -110,8 +114,39 @@ impl From<&Row> for NoticePost {
                 row.get("sender_nick"),
                 row.get("sender_avatar_url"),
             ),
-            post_id: row.get("sender_obj_id"),
+            post_id: row.get("sender_object"),
             content: row.get("content"),
+            create_time: row.get("create_time"),
+            read: row.get("read"),
+        }
+    }
+}
+
+
+/// 评论通知
+#[derive(Serialize, Deserialize)]
+pub struct NoticeFriend {
+    pub id: BigInt,
+    /// 点赞者信息
+    pub sender: UserData,
+    /// 文章内容
+    pub msg: String,
+    /// 点赞时间
+    pub create_time: NaiveDateTime,
+    /// 已读
+    pub read: bool,
+}
+
+impl From<&Row> for NoticeFriend {
+    fn from(row: &Row) -> Self {
+        Self {
+            id: row.get("id"),
+            sender: UserData::unreference(
+                &row.get("sender_id"),
+                row.get("sender_nick"),
+                row.get("sender_avatar_url"),
+            ),
+            msg: row.get("sender_object"),
             create_time: row.get("create_time"),
             read: row.get("read"),
         }

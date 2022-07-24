@@ -5,12 +5,14 @@ mod errors;
 mod handlers;
 mod utils;
 mod traits;
+mod middleware;
 
 use crate::config::WepoConfig;
 use crate::{
     handlers::UserHandler,
     handlers::PostHandler,
     handlers::MsgHandler,
+    handlers::FriendshipHandler,
 };
 use ::config::Config;
 use actix_cors::Cors;
@@ -78,6 +80,13 @@ async fn main() -> std::io::Result<()> {
                         .route("/comments", post().to(MsgHandler::get_comment_notices)) // 获取评论通知
                         .route("/likes", post().to(MsgHandler::get_like_notices)) // 获取点赞通知
                         .route("/hates", post().to(MsgHandler::get_hate_notices)) // 获取反感通知
+                        .route("/friend_add", post().to(MsgHandler::get_add_friend_notices)) // 好友添加通知
+                        .route("/friend_remove", post().to(MsgHandler::get_remove_friend_notices)) // 好友移除通知
+                    )
+                    .service(
+                        web::scope("/friend")
+                        .route("add", post().to(FriendshipHandler::add_friendship)) // 添加好友
+                        .route("remove", post().to(FriendshipHandler::remove_friendship)) // 移除好友
                     )
             )
     })

@@ -1,6 +1,5 @@
 use actix::Addr;
 use actix_redis::RedisActor;
-use log::info;
 
 use crate::{
     base::{big_int::BigInt, pg_client::PGClient},
@@ -28,7 +27,7 @@ pub async fn send_comment_notice(
     .await;
 }
 
-/// 发送点赞通知
+/// 发送 post 点赞/反感通知
 pub async fn sender_post_notice(
     notice_type: &NoticeType,
     sender_id: &i32,
@@ -54,4 +53,22 @@ pub async fn sender_post_notice(
     }
 
     Ok(())
+}
+
+/// 发送好友添加通知
+pub async fn send_friend_notice(
+    notice_type: &NoticeType,
+    sender_id: &i32,
+    receiver_id: &i32,
+    msg: &String,
+    client: &PGClient,
+) -> () {
+    let _result = storage::send_notice(
+        sender_id,
+        &notice_type,
+        &msg,
+        receiver_id,
+        &client,
+    )
+    .await;
 }
