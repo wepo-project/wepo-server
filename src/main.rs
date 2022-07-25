@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
             .wrap_fn(|req, srv| {
                 let fut = srv.call(req);
                 async {
-                    actix::clock::sleep(Duration::from_secs(1)).await;
+                    actix::clock::sleep(Duration::from_millis(500)).await;
                     fut.await
                 }
             })
