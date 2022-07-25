@@ -1,6 +1,5 @@
 use actix::Addr;
 use actix_redis::RedisActor;
-use log::info;
 
 use crate::{
     base::{big_int::BigInt, pg_client::PGClient},

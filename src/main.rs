@@ -6,6 +6,8 @@ mod handlers;
 mod utils;
 mod traits;
 
+use std::time::Duration;
+
 use crate::config::WepoConfig;
 use crate::{
     handlers::UserHandler,
@@ -15,7 +17,7 @@ use crate::{
 use ::config::Config;
 use actix_cors::Cors;
 use actix_redis::RedisActor;
-use actix_web::{http, web::{self, get, post, delete}, App, HttpServer};
+use actix_web::{http, web::{self, get, post, delete}, App, HttpServer, dev::Service};
 use dotenv::dotenv;
 use log::info;
 use tokio_postgres::NoTls;
@@ -50,6 +52,13 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(redis_addr.clone()))
+            .wrap_fn(|req, srv| {
+                let fut = srv.call(req);
+                async {
+                    actix::clock::sleep(Duration::from_secs(1)).await;
+                    fut.await
+                }
+            })
             .service(
                 web::scope("/v1")
                     .service(
