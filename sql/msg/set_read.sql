@@ -1,0 +1,1 @@
+-- UPDATE main.notices SET read = true WHERE id in $1;

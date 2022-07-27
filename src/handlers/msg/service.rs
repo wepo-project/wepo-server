@@ -16,6 +16,7 @@ pub async fn send_comment_notice(
     receiver_id: &i32,
     post_id: &BigInt,
     client: &PGClient,
+    redis_addr: &Addr<RedisActor>,
 ) -> () {
     let _result = storage::send_notice(
         sender_id,
@@ -23,6 +24,7 @@ pub async fn send_comment_notice(
         &post_id.to_string(),
         receiver_id,
         &client,
+        redis_addr,
     )
     .await;
 }
@@ -39,7 +41,7 @@ pub async fn sender_post_notice(
     // info!("收件人id:{:?}", addressee_id);
 
     if let Ok(addressee_id) = addressee_id {
-        // 自己给自己点赞不通知 
+        // 自己给自己点赞不通知
         if &addressee_id != sender_id {
             let _result = storage::send_notice(
                 sender_id,
@@ -47,6 +49,7 @@ pub async fn sender_post_notice(
                 &post_id.to_string(),
                 &addressee_id,
                 &client,
+                redis_addr
             )
             .await;
         }
@@ -62,13 +65,7 @@ pub async fn send_friend_notice(
     receiver_id: &i32,
     msg: &String,
     client: &PGClient,
+    redis_addr: &Addr<RedisActor>,
 ) -> () {
-    let _result = storage::send_notice(
-        sender_id,
-        &notice_type,
-        &msg,
-        receiver_id,
-        &client,
-    )
-    .await;
+    let _result = storage::send_notice(sender_id, &notice_type, &msg, receiver_id, &client, redis_addr).await;
 }

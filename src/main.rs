@@ -10,6 +10,7 @@ mod middleware;
 use std::time::Duration;
 
 use crate::config::WepoConfig;
+use crate::middleware::delay::DevDelay;
 use crate::{
     handlers::UserHandler,
     handlers::PostHandler,
@@ -19,7 +20,7 @@ use crate::{
 use ::config::Config;
 use actix_cors::Cors;
 use actix_redis::RedisActor;
-use actix_web::{http, web::{self, get, post, delete}, App, HttpServer, dev::Service};
+use actix_web::{http, web::{self, get, post, delete}, App, HttpServer};
 use dotenv::dotenv;
 use log::info;
 use tokio_postgres::NoTls;
@@ -54,13 +55,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(redis_addr.clone()))
-            .wrap_fn(|req, srv| {
-                let fut = srv.call(req);
-                async {
-                    actix::clock::sleep(Duration::from_millis(500)).await;
-                    fut.await
-                }
-            })
+            .wrap(DevDelay::new(Duration::from_millis(500))) // 延迟 
             .service(
                 web::scope("/v1")
                     .service(
@@ -86,6 +81,7 @@ async fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::scope("/msg")
+                        .route("/unread", get().to(MsgHandler::get_unread_msg)) // 获取未读消息数量
                         .route("/comments", post().to(MsgHandler::get_comment_notices)) // 获取评论通知
                         .route("/likes", post().to(MsgHandler::get_like_notices)) // 获取点赞通知
                         .route("/hates", post().to(MsgHandler::get_hate_notices)) // 获取反感通知

@@ -1,10 +1,12 @@
 
+use actix::Addr;
+use actix_redis::RedisActor;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper_derive::PostgresMapper;
 use tokio_postgres::Row;
 
-use crate::{base::big_int::BigInt, define_num_enum};
+use crate::{base::{big_int::BigInt, redis_key::RedisKey}, define_num_enum, utils::db_helper::RedisCmd};
 
 use super::user::UserData;
 
@@ -23,8 +25,8 @@ pub struct Notice {
     pub addressee_id: i32,
     /// 创建时间
     pub create_time: NaiveDateTime,
-    /// 是否已读
-    pub read: bool,
+    // /// 是否已读
+    // pub read: bool,
 }
 
 define_num_enum!{
@@ -43,6 +45,27 @@ define_num_enum!{
     }
 }
 
+impl NoticeType {
+    pub fn get_notice_key(&self, user_id: &i32) -> String {
+        match self {
+            &NoticeType::Comment => RedisKey::unread_comments(user_id),
+            &NoticeType::Like => RedisKey::unread_likes(user_id),
+            &NoticeType::Hate => RedisKey::unread_hates(user_id),
+            &NoticeType::FriendAdd => RedisKey::unread_friend_add(user_id),
+            &NoticeType::FriendRemove => RedisKey::unread_friend_remove(user_id),
+        }
+    }
+    /// 增加通知的数量
+    pub fn incr(&self, redis: &Addr<RedisActor>, user_id: &i32) {
+        let key = self.get_notice_key(user_id);
+        redis.do_send(RedisCmd::incr(key));
+    }
+    /// 清空通知数量
+    pub fn del(&self, redis: &Addr<RedisActor>, user_id: &i32) {
+        let key = self.get_notice_key(user_id);
+        redis.do_send(RedisCmd::del(key));
+    }
+}
 
 
 /// 评论通知
@@ -57,8 +80,8 @@ pub struct NoticeComment {
     pub content: String,
     /// 评论时间
     pub create_time: NaiveDateTime,
-    /// 已读
-    pub read: bool,
+    // /// 已读
+    // pub read: bool,
     /// 原文id
     pub origin_id: BigInt,
     /// 原文
@@ -67,8 +90,8 @@ pub struct NoticeComment {
     pub origin_create_time: NaiveDateTime,
 }
 
-impl From<&Row> for NoticeComment {
-    fn from(row: &Row) -> Self {
+impl From<Row> for NoticeComment {
+    fn from(row: Row) -> Self {
         Self {
             id: row.get("id"),
             sender: UserData::unreference(
@@ -81,7 +104,7 @@ impl From<&Row> for NoticeComment {
             origin_id: row.get("origin_id"),
             origin: row.get("origin"),
             create_time: row.get("create_time"),
-            read: row.get("read"),
+            // read: row.get("read"),
             origin_create_time: row.get("origin_create_time"),
         }
     }
@@ -101,12 +124,12 @@ pub struct NoticePost {
     pub content: String,
     /// 点赞时间
     pub create_time: NaiveDateTime,
-    /// 已读
-    pub read: bool,
+    // /// 已读
+    // pub read: bool,
 }
 
-impl From<&Row> for NoticePost {
-    fn from(row: &Row) -> Self {
+impl From<Row> for NoticePost {
+    fn from(row: Row) -> Self {
         Self {
             id: row.get("id"),
             sender: UserData::unreference(
@@ -117,7 +140,7 @@ impl From<&Row> for NoticePost {
             post_id: row.get("sender_object"),
             content: row.get("content"),
             create_time: row.get("create_time"),
-            read: row.get("read"),
+            // read: row.get("read"),
         }
     }
 }
@@ -133,12 +156,12 @@ pub struct NoticeFriend {
     pub msg: String,
     /// 点赞时间
     pub create_time: NaiveDateTime,
-    /// 已读
-    pub read: bool,
+    // /// 已读
+    // pub read: bool,
 }
 
-impl From<&Row> for NoticeFriend {
-    fn from(row: &Row) -> Self {
+impl From<Row> for NoticeFriend {
+    fn from(row: Row) -> Self {
         Self {
             id: row.get("id"),
             sender: UserData::unreference(
@@ -148,7 +171,7 @@ impl From<&Row> for NoticeFriend {
             ),
             msg: row.get("sender_object"),
             create_time: row.get("create_time"),
-            read: row.get("read"),
+            // read: row.get("read"),
         }
     }
 }

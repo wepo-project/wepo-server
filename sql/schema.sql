@@ -69,8 +69,8 @@ CREATE TABLE IF NOT EXISTS main.notices
     addressee_id integer NOT NULL REFERENCES main.users(id) ON DELETE CASCADE,
     -- 创建时间
     create_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    -- 是否已读
-    read boolean NOT NULL DEFAULT FALSE,
+    -- -- 是否已读
+    -- read boolean NOT NULL DEFAULT FALSE,
     -- 主键约束
     CONSTRAINT notices_pkey PRIMARY KEY (id),
     -- 唯一约束

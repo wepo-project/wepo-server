@@ -72,10 +72,16 @@ impl RedisCmd {
         (set, key, value),
         /// 删除
         (del, key),
+        // ====================================
         /// 自增
         (incr, key),
+        /// 自增
+        (incrby, key, increment),
         /// 自减
         (decr, key),
+        /// 自减
+        (decrby, key, decrement),
+        // ====================================
         /// 集合增加
         (sadd, key, member),
         /// 是否在集合中

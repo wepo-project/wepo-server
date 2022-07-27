@@ -101,6 +101,7 @@ pub async fn comment(
     user: UserInfo,
     body: web::Json<CommentPostDTO>,
     client: PGClient,
+    redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let comment_result = storage::comment(&user, &body, &client).await?;
     info!("New Comment:{}", comment_result.id);
@@ -111,6 +112,7 @@ pub async fn comment(
             &comment_result.receiver,
             &comment_result.id,
             &client,
+            &redis_addr
         )
         .await;
     }

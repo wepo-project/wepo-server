@@ -1,6 +1,6 @@
 SELECT
     n.id,
-    n.read,
+    -- n.read,
     n.create_time,
     n.sender_object,
     u.id AS sender_id,
