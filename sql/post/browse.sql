@@ -1,6 +1,6 @@
 SELECT
     r1.id, 
-    r1.content, 
+    r1.content::varchar(100), 
     r1.create_time, 
     r1.likes, 
     r1.hates,
