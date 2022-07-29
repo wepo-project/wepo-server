@@ -40,6 +40,10 @@ pub async fn delete(
     redis_addr: web::Data<Addr<RedisActor>>,
 ) -> Result<HttpResponse, MyError> {
     let _ = storage::delete(&user, &del_body, &client, &redis_addr).await?;
+    spawn(async move {
+        // 删除post的相关通知
+        let _ = MsgService::delete_post_notice(&user.id, &client).await;
+    });
     Ok(HttpResponse::Ok().json(ResultResponse::succ()))
 }
 

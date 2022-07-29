@@ -85,9 +85,9 @@ pub struct NoticeComment {
     /// 原文id
     pub origin_id: BigInt,
     /// 原文
-    pub origin: String,
+    pub origin: Option<String>,
     /// 原文时间
-    pub origin_create_time: NaiveDateTime,
+    pub origin_create_time: Option<NaiveDateTime>,
 }
 
 impl From<Row> for NoticeComment {
@@ -121,9 +121,9 @@ pub struct NoticePost {
     /// 文章id
     pub post_id: BigInt,
     /// 文章内容
-    pub content: String,
+    pub content: Option<String>,
     /// 点赞时间
-    pub create_time: NaiveDateTime,
+    pub create_time: Option<NaiveDateTime>,
     // /// 已读
     // pub read: bool,
 }

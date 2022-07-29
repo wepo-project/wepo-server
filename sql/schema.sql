@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS main.posts
     comments integer NOT NULL DEFAULT 0,
     -- 讨厌数量
     hates integer NOT NULL DEFAULT 0,
-    -- 继承（评论）哪条po文
-    extends bigint REFERENCES main.posts(id),
+    -- 继承（评论） 如果原文删除，则查找不到
+    extends bigint,
     -- 主键约束
     CONSTRAINT posts_pkey PRIMARY KEY (id)
 );

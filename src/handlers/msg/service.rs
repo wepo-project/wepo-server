@@ -69,3 +69,16 @@ pub async fn send_friend_notice(
 ) -> () {
     let _result = storage::send_notice(sender_id, &notice_type, &msg, receiver_id, &client, redis_addr).await;
 }
+
+/// 删除post的点赞和反感通知
+pub async fn delete_post_notice(
+    user_id: &i32,
+    client: &PGClient,
+) -> Result<(), MyError> {
+    let _stmt = include_str!("../../../sql/msg/delete_post_notices.sql");
+    let stmt = client.prepare(_stmt).await?;
+    let _vec = client.query(&stmt, &[user_id, NoticeType::Like.to_i16(), NoticeType::Hate.to_i16()])
+        .await
+        .map_err(MyError::PGError)?;
+    Ok(())
+}
