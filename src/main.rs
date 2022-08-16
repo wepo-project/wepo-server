@@ -5,18 +5,19 @@ mod errors;
 mod handlers;
 mod utils;
 mod traits;
-mod middleware;
+mod wrap;
 
 use std::time::Duration;
 
 use crate::config::WepoConfig;
-use crate::middleware::delay::DevDelay;
+use crate::wrap::delay::DevDelay;
 use crate::{
     handlers::UserHandler,
     handlers::PostHandler,
     handlers::MsgHandler,
     handlers::FriendshipHandler,
 };
+use actix_web::middleware;
 use ::config::Config;
 use actix_cors::Cors;
 use actix_redis::RedisActor;
@@ -53,9 +54,10 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
+            .wrap(middleware::Logger::new("%r %s"))
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(redis_addr.clone()))
-            .wrap(DevDelay::new(Duration::from_millis(500))) // 延迟 
+            .wrap(DevDelay::new(Duration::from_millis(300))) // 延迟 
             .service(
                 web::scope("/v1")
                     .service(

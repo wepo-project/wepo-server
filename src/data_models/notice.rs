@@ -77,13 +77,13 @@ pub struct NoticeComment {
     /// 评论id
     pub post_id: BigInt,
     /// 评论内容
-    pub content: String,
+    pub content: Option<String>,
     /// 评论时间
     pub create_time: NaiveDateTime,
     // /// 已读
     // pub read: bool,
     /// 原文id
-    pub origin_id: BigInt,
+    pub origin_id: Option<BigInt>,
     /// 原文
     pub origin: Option<String>,
     /// 原文时间
